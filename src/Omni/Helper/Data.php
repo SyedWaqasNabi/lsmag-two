@@ -110,4 +110,8 @@ class Data extends AbstractHelper
         $this->session->start();
         return $this->session->unsMessage();
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> master

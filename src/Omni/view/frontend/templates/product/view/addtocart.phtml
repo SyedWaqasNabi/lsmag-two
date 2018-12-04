@@ -9,6 +9,10 @@
 /** @var $block \Ls\Omni\Block\Product\View\View */
 ?>
 <?php $_product = $block->getProduct(); ?>
+<<<<<<< HEAD
+=======
+<?php $isEnableCheck = $block->isEnable();?>
+>>>>>>> master
 <?php $buttonTitle = __('Add to Cart'); ?>
 <?php if ($_product->isSaleable()): ?>
     <div class="box-tocart">
@@ -32,10 +36,19 @@
                 </div>
             <?php endif; ?>
             <div class="actions">
+<<<<<<< HEAD
                 <div class="availability-link-container">
                     <a href="javascript:void()" name="checkavailability"
                        class="checkavailability"><?php echo __('Check Availability for Click & Collect') ?></a>
                 </div>
+=======
+                <?php if($isEnableCheck){?>
+                    <div class="availability-link-container">
+                        <a href="javascript:void()" name="checkavailability"
+                           class="checkavailability"><?php echo __('Check Availability in Stores') ?></a>
+                    </div>
+                <?php } ?>
+>>>>>>> master
                 <button type="submit"
                         title="<?= /* @escapeNotVerified */
                         $buttonTitle ?>"
@@ -69,4 +82,8 @@
             "lsomni/stock": {}
         }
     }
+<<<<<<< HEAD
 </script>
+=======
+</script>
+>>>>>>> master

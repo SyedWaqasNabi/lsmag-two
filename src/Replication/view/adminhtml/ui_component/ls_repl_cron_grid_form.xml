@@ -125,6 +125,7 @@
                 </item>
             </argument>
         </column>
+<<<<<<< HEAD
         <actionsColumn name="actions" class="Ls\Replication\Ui\Component\Listing\Column\Actions">
             <argument name="data" xsi:type="array">
                 <item name="config" xsi:type="array">
@@ -135,5 +136,17 @@
                 </item>
             </argument>
         </actionsColumn>
+=======
+            <actionsColumn name="actions" class="Ls\Replication\Ui\Component\Listing\Column\Actions">
+                <argument name="data" xsi:type="array">
+                    <item name="config" xsi:type="array">
+                        <item name="sortable" xsi:type="boolean">false</item>
+                        <item name="label" xsi:type="string" translate="true">Execute</item>
+                        <item name="sortOrder" xsi:type="number">5</item>
+                        <item name="fieldAction" xsi:type="boolean">false</item>
+                    </item>
+                </argument>
+            </actionsColumn>
+>>>>>>> master
     </columns>
 </listing>

@@ -109,11 +109,20 @@ class StockHelper extends \Magento\Framework\App\Helper\AbstractHelper
     public function getAllStoresFromReplTable($storesNavIds)
     {
 
+<<<<<<< HEAD
         $stores = $this->_storeCollectionFactory
             ->create()
             ->addFieldToFilter('ClickAndCollect', 1)
             ->addFieldToFilter('nav_id', array('in' => $storesNavIds))
             ->toArray();
         return \Zend_Json::encode($stores);
+=======
+            $stores = $this->_storeCollectionFactory
+                ->create()
+                ->addFieldToFilter('ClickAndCollect', 1)
+                ->addFieldToFilter('nav_id', array('in' => $storesNavIds))
+                ->toArray();
+            return \Zend_Json::encode($stores);
+>>>>>>> master
     }
 }

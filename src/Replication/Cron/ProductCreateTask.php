@@ -123,7 +123,6 @@ class ProductCreateTask
 
     /**
      * ProductCreateTask constructor.
-     *
      * @param Factory $factory
      * @param Item $item
      * @param Config $eavConfig
@@ -141,6 +140,7 @@ class ProductCreateTask
      * @param ReplImageRepository $replImageRepository
      * @param ReplHierarchyLeafRepository $replHierarchyLeafRepository
      * @param ReplBarcodeRepository $replBarcodeRepository
+     * @param ReplPriceRepository $replPriceRepository
      * @param SearchCriteriaBuilder $searchCriteriaBuilder
      * @param FilterBuilder $filterBuilder
      * @param FilterGroupBuilder $filterGroupBuilder
@@ -222,6 +222,8 @@ class ProductCreateTask
 
         $CronCategoryCheck = $this->_lsr->getStoreConfig(LSR::SC_SUCCESS_CRON_CATEGORY);
         $CronAttributeCheck = $this->_lsr->getStoreConfig(LSR::SC_SUCCESS_CRON_ATTRIBUTE);
+        $productBatchSize = $this->_lsr->getStoreConfig(LSR::SC_REPLICATION_PRODUCT_BATCHSIZE);
+
 
         if ($CronCategoryCheck == 1 && $CronAttributeCheck == 1) {
             if ($fullReplicationAttributeStatus != 1 && $fullReplicationAttributeOptionValueStatus != 1)
@@ -230,7 +232,7 @@ class ProductCreateTask
 
             $this->logger->debug('Running ProductCreateTask');
             /** @var \Magento\Framework\Api\SearchCriteria $criteria */
-            $criteria = $this->replicationHelper->buildCriteriaForNewItems('', '', '', 25);
+            $criteria = $this->replicationHelper->buildCriteriaForNewItems('', '', '', $productBatchSize);
 
             /** @var \Ls\Replication\Model\ReplItemSearchResults $items */
             $items = $this->itemRepository->getList($criteria);
@@ -339,7 +341,11 @@ class ProductCreateTask
     public function executeManually()
     {
         $this->execute();
+<<<<<<< HEAD
         $criteria = $this->replicationHelper->buildCriteriaForNewItems('', '', '', 20);
+=======
+        $criteria = $this->replicationHelper->buildCriteriaForNewItems('', '', '', -1);
+>>>>>>> master
         $items = $this->itemRepository->getList($criteria);
         $itemsLeftToProcess = count($items->getItems());
         return array($itemsLeftToProcess);

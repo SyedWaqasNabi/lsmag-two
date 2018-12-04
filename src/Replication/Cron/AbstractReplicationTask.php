@@ -42,7 +42,11 @@ abstract class AbstractReplicationTask
         "ls_mag/replication/repl_currency_exch_rate" => array("CurrencyCode"),
         "ls_mag/replication/repl_customer" => array("AccountNumber"),
         "ls_mag/replication/repl_data_translation" => array("TranslationId"),
+<<<<<<< HEAD
         "ls_mag/replication/repl_discount" => array("ItemId", "LoyaltySchemeCode","OfferNo", "StoreId"),
+=======
+        "ls_mag/replication/repl_discount" => array("ItemId", "LoyaltySchemeCode", "StoreId"),
+>>>>>>> master
         "ls_mag/replication/repl_discount_validation" => array("nav_id"),
         "ls_mag/replication/repl_extended_variant_value" => array("Code", "FrameworkCode", "ItemId"),
         "ls_mag/replication/repl_hierarchy" => array("nav_id"),
