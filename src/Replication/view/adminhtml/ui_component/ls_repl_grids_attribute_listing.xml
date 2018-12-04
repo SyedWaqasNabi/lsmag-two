@@ -78,7 +78,7 @@
                     <item name="childDefaults" xsi:type="array">
                         <item name="provider" xsi:type="string">ls_repl_grids_discount_listing.ls_repl_grids_discount_listing.listing_top.listing_filters</item>
                         <item name="imports" xsi:type="array">
-                            <item name="visible" xsi:type="string">ls_repl_grids_attribute_listing.ls_repl_grids_attribute_listing.ls_repl_grids_attribute_columns..${ $.index }:visible</item>
+                            <item name="visible" xsi:type="string">ls_repl_grids_attribute_listing.ls_repl_grids_attribute_listing.ls_repl_grids_attribute_columns.${ $.index }:visible</item>
                         </item>
                     </item>
                 </item>

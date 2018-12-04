@@ -79,20 +79,42 @@
         <filters name="listing_filters">
             <argument name="data" xsi:type="array">
                 <item name="config" xsi:type="array">
-                    <item name="columnsProvider" xsi:type="string">ls_repl_grids_discount_listing.ls_repl_grids_discount_listing.ls_repl_grids_discount_columns</item>
+                    <item name="columnsProvider" xsi:type="string">
+                        ls_repl_grids_discount_listing.ls_repl_grids_discount_listing.ls_repl_grids_discount_columns
+                    </item>
                     <item name="storageConfig" xsi:type="array">
-                        <item name="provider" xsi:type="string">ls_repl_grids_discount_listing.ls_repl_grids_discount_listing.listing_top.bookmarks</item>
+                        <item name="provider" xsi:type="string">
+                            ls_repl_grids_discount_listing.ls_repl_grids_discount_listing.listing_top.bookmarks
+                        </item>
                         <item name="namespace" xsi:type="string">current.filters</item>
                     </item>
                     <item name="childDefaults" xsi:type="array">
-                        <item name="provider" xsi:type="string">ls_repl_grids_discount_listing.ls_repl_grids_discount_listing.listing_top.listing_filters</item>
+                        <item name="provider" xsi:type="string">
+                            ls_repl_grids_discount_listing.ls_repl_grids_discount_listing.listing_top.listing_filters
+                        </item>
                         <item name="imports" xsi:type="array">
-                            <item name="visible" xsi:type="string">ls_repl_grids_discount_listing.ls_repl_grids_discount_listing.ls_repl_grids_discount_columns..${ $.index }:visible</item>
+                            <item name="visible" xsi:type="string">
+                                ls_repl_grids_discount_listing.ls_repl_grids_discount_listing.ls_repl_grids_discount_columns.${ $.index }:visible
+                            </item>
                         </item>
                     </item>
                 </item>
             </argument>
         </filters>
+    </container>
+
+    <container name="sticky">
+        <argument name="data" xsi:type="array">
+            <item name="config" xsi:type="array">
+                <item name="component" xsi:type="string">Magento_Ui/js/grid/sticky/sticky</item>
+                <item name="toolbarProvider" xsi:type="string">
+                    ls_repl_grids_discount_listing.ls_repl_grids_discount_listing.listing_top
+                </item>
+                <item name="listingProvider" xsi:type="string">
+                    ls_repl_grids_discount_listing.ls_repl_grids_discount_listing.ls_repl_grids_discount_columns
+                </item>
+            </item>
+        </argument>
     </container>
 
     <columns name="ls_repl_grids_discount_columns">
