@@ -3,11 +3,14 @@ namespace Ls\Omni\Plugin\Checkout\Block\Checkout\AttributeMerger;
 
 class StreetPlugin
 {
+<<<<<<< HEAD
+=======
     /**
      * @param \Magento\Checkout\Block\Checkout\AttributeMerger $subject
      * @param $result
      * @return mixed
      */
+>>>>>>> master
     public function afterMerge(\Magento\Checkout\Block\Checkout\AttributeMerger $subject, $result)
     {
         if (array_key_exists('street', $result)) {

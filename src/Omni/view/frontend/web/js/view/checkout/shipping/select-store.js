@@ -23,17 +23,17 @@ define([
         isMapVisible: ko.observable(false),
 
         initialize: function () {
-        	var self = this;
-        	quote.shippingMethod.subscribe(function () {
-            	if (quote.shippingMethod().carrier_code == 'clickandcollect') {
-            		self.isClickAndCollect(true);
+            var self = this;
+            quote.shippingMethod.subscribe(function () {
+                if (quote.shippingMethod().carrier_code == 'clickandcollect') {
+                    self.isClickAndCollect(true);
                     var stores = $.parseJSON(window.checkoutConfig.shipping.select_store.stores);
                     if(stores.totalRecords > 1) {
                         self.isSelectStoreVisible(true);
                     }
-            	} else {
-            		self.isClickAndCollect(false);
-            	}
+                } else {
+                    self.isClickAndCollect(false);
+                }
             });
 
             this.isMapVisible.subscribe(function (value) {
@@ -140,14 +140,14 @@ define([
                     console.error("ERROR: Google maps library failed to load");
                 });
                 popUp = modal({
-                	'responsive': true,
-                	'innerScroll': true,
+                    'responsive': true,
+                    'innerScroll': true,
                     'buttons': [],
                     'type': 'slide',
                     'modalClass': 'mc_cac_map',
-                	closed: function() {
-            			self.isMapVisible(false)
-            		}
+                    closed: function() {
+                        self.isMapVisible(false)
+                    }
                 }, $('#map-canvas'));
             }
             return popUp;

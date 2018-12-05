@@ -10,12 +10,21 @@
         <css src="Ls_Omni::css/mc_clickandcollect.css"/>
     </head>
     <body>
+<<<<<<< HEAD
+        <referenceContainer name="content">
+            <block  class="Ls\Omni\Block\Product\View\Loyalty"
+                    name="ls.omni.product.notification"
+                    template="Ls_Omni::product/view/notification.phtml"
+                    before="product.info.main" />
+        </referenceContainer>
+=======
     <referenceContainer name="content">
         <block  class="Ls\Omni\Block\Product\View\Loyalty"
                 name="ls.omni.product.notification"
                 template="Ls_Omni::product/view/notification.phtml"
                 before="product.info.main" />
     </referenceContainer>
+>>>>>>> master
         <referenceBlock name="product.info.addtocart">
             <action method="setTemplate">
                 <argument name="template" xsi:type="string">Ls_Omni::product/view/addtocart.phtml</argument>
@@ -27,4 +36,8 @@
             </action>
         </referenceBlock>
     </body>
+<<<<<<< HEAD
 </page>
+=======
+</page>
+>>>>>>> master

@@ -103,6 +103,9 @@ class View extends \Magento\Catalog\Block\Product\View
         $configValue = $this->_lsr->getDefaultZoom();
         return $configValue;
     }
+<<<<<<< HEAD
+}
+=======
 
     /**
      * Get default default zoom from config
@@ -114,3 +117,4 @@ class View extends \Magento\Catalog\Block\Product\View
         return $configValue;
     }
 }
+>>>>>>> master

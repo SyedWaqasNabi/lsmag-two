@@ -93,4 +93,8 @@ class Product extends \Magento\Framework\App\Action\Action
     }
 
 
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> master

@@ -208,7 +208,7 @@ class CategoryCreateTask
         if (count($replHierarchyNodeRepositorySub->getItems()) == 0 && count($replHierarchyNodeRepositorySub->getItems()) == 0) {
             $this->cronStatus = true;
         }
-        //Update the Modified Images 
+        //Update the Modified Images
         $this->updateImagesOnly();
         $this->replicationHelper->updateCronStatus($this->cronStatus, LSR::SC_SUCCESS_CRON_CATEGORY);
     }

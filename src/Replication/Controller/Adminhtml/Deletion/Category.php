@@ -25,7 +25,7 @@ class Category extends Action
 
     /** @var array  */
     protected $_publicActions = ['category'];
-    
+
     /**
      * Category Deletion constructor.
      * @param CategoryFactory $categoryFactory Category Factory
