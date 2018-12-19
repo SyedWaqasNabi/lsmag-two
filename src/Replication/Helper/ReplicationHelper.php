@@ -2,7 +2,6 @@
 
 namespace Ls\Replication\Helper;
 
-
 use Ls\Omni\Client\Ecommerce\Entity;
 use Ls\Omni\Client\Ecommerce\Operation;
 use Ls\Core\Model\LSR;
@@ -16,13 +15,17 @@ use Magento\Framework\App\Config\ScopeConfigInterface;
 use \Magento\Framework\App\Config\Storage\WriterInterface;
 use Magento\Framework\App\Cache\TypeListInterface;
 
+/**
+ * Class ReplicationHelper
+ * @package Ls\Replication\Helper
+ */
 class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
 {
 
-    /** @var \Magento\Store\Model\StoreManagerInterface  */
+    /** @var \Magento\Store\Model\StoreManagerInterface */
     protected $storeManager;
 
-    /** @var \Magento\Framework\Filesystem  */
+    /** @var \Magento\Framework\Filesystem */
     protected $_filesystem;
 
     /** @var SearchCriteriaBuilder */
@@ -50,7 +53,7 @@ class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
     /** @var chache type list */
     protected $cacheTypeList;
 
-    /** @var LSR  */
+    /** @var LSR */
     protected $_lsr;
 
 
@@ -89,11 +92,10 @@ class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
         $this->_filesystem = $Filesystem;
         $this->replImageLinkRepositoryInterface = $replImageLinkRepositoryInterface;
         $this->eavConfig = $eavConfig;
-        $this->configWriter=$configWriter;
+        $this->configWriter = $configWriter;
         $this->attributeSet = $attributeSet;
-        $this->cacheTypeList=$cacheTypeList;
-        $this->_lsr         =   $LSR;
-
+        $this->cacheTypeList = $cacheTypeList;
+        $this->_lsr = $LSR;
         parent::__construct(
             $context
         );
@@ -104,7 +106,7 @@ class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
      * @param string $filtervalue
      * @return \Magento\Framework\Api\SearchCriteria
      */
-    public function buildCriteriaForNewItems($filtername = '', $filtervalue = '', $conditionType = 'eq', $pagesize = 100)
+    public function buildCriteriaForNewItems($filtername = '', $filtervalue = '', $conditionType = 'eq', $pagesize = 100, $excludeDeleted = true)
     {
         // creating search criteria for two fields
         // processed = 0 which means not yet processed
@@ -126,11 +128,14 @@ class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
         $criteria = $this->searchCriteriaBuilder->setFilterGroups([$filterOr]);
         if ($filtername != '' && $filtervalue != '') {
             $criteria->addFilter(
-                $filtername, $filtervalue, $conditionType
+                $filtername,
+                $filtervalue,
+                $conditionType
             );
         }
-        $criteria->addFilter('IsDeleted', 0, 'eq');
-        if($pagesize!=-1) {
+        if ($excludeDeleted)
+            $criteria->addFilter('IsDeleted', 0, 'eq');
+        if ($pagesize != -1) {
             $criteria->setPageSize($pagesize);
         }
         return $criteria->create();
@@ -141,7 +146,7 @@ class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
      * @param string $filtervalue
      * @return \Magento\Framework\Api\SearchCriteria
      */
-    public function buildCriteriaForProductAttributes($item_id = '', $pagesize = 100)
+    public function buildCriteriaForProductAttributes($item_id = '', $pagesize = 100, $excludeDeleted = true)
     {
         $attr_processed = $this->filterBuilder->setField('processed')
             ->setValue('0')
@@ -161,7 +166,8 @@ class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
         $criteria = $this->searchCriteriaBuilder->setFilterGroups([$filterOr]);
         $criteria->addFilter('LinkType', 0, 'eq');
         $criteria->addFilter('LinkField1', $item_id, 'eq');
-        $criteria->addFilter('IsDeleted', 0, 'eq');
+        if ($excludeDeleted)
+            $criteria->addFilter('IsDeleted', 0, 'eq');
         $criteria->setPageSize($pagesize);
         return $criteria->create();
     }
@@ -170,9 +176,10 @@ class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
      * Create Build Criteria with Array of filters as a parameters
      * @param array $filters
      * @param int $pagesize
+     * @param boolean $excludeDeleted
      * @return \Magento\Framework\Api\SearchCriteria
      */
-    public function buildCriteriaForArray(array $filters, $pagesize = 100)
+    public function buildCriteriaForArray(array $filters, $pagesize = 100, $excludeDeleted = true)
     {
         $attr_processed = $this->filterBuilder->setField('processed')
             ->setValue('0')
@@ -195,7 +202,8 @@ class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
                 $criteria->addFilter($filter['field'], $filter['value'], $filter['condition_type']);
             }
         }
-        $criteria->addFilter('IsDeleted', 0, 'eq');
+        if ($excludeDeleted)
+            $criteria->addFilter('IsDeleted', 0, 'eq');
         $criteria->setPageSize($pagesize);
         return $criteria->create();
     }
@@ -207,7 +215,7 @@ class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
      * @param int $pagesize
      * @return \Magento\Framework\Api\SearchCriteria
      */
-    public function buildCriteriaGetUpdatedOnly(array $filters, $pagesize = 100)
+    public function buildCriteriaGetUpdatedOnly(array $filters, $pagesize = 100, $excludeDeleted = true)
     {
         $criteria = $this->searchCriteriaBuilder;
         if (!empty($filters)) {
@@ -215,12 +223,12 @@ class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
                 $criteria->addFilter($filter['field'], $filter['value'], $filter['condition_type']);
             }
         }
-        $criteria->addFilter('IsDeleted', 0, 'eq');
+        if ($excludeDeleted)
+            $criteria->addFilter('IsDeleted', 0, 'eq');
         $criteria->addFilter('is_updated', 1, 'eq');
         $criteria->setPageSize($pagesize);
         return $criteria->create();
     }
-
 
 
     /**
@@ -253,9 +261,13 @@ class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
             return false;
         }
         $criteria = $this->searchCriteriaBuilder->addFilter(
-            'KeyValue', $nav_id, 'eq'
+            'KeyValue',
+            $nav_id,
+            'eq'
         )->addFilter(
-            'TableName', $type, 'eq'
+            'TableName',
+            $type,
+            'eq'
         )->create();
 
         /** @var \Ls\Replication\Model\ReplImageLinkSearchResults $items */
@@ -274,8 +286,8 @@ class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
      */
     public function imageStreamById($image_id = '')
     {
-        $response = NULL;
-        if ($image_id == '' || $image_id == NULL) {
+        $response = null;
+        if ($image_id == '' || $image_id == null) {
             return $response;
         }
         $request = new Operation\ImageStreamGetById();
@@ -283,7 +295,7 @@ class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
         $entity->setId($image_id);
         try {
             $response = $request->execute($entity);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->_logger->error($e->getMessage());
         }
         return $response ? $response->getResult() : $response;
@@ -331,80 +343,83 @@ class ReplicationHelper extends \Magento\Framework\App\Helper\AbstractHelper
     public function getAllWebsitesIds()
     {
 
-        $websiteIds = array();
+        $websiteIds = [];
         $websites = $this->storeManager->getWebsites();
         /** @var \Magento\Store\Model\Website\Interceptor $website */
         foreach ($websites as $website) {
             $websiteIds[] = $website->getId();
         }
         return $websiteIds;
-
     }
 
+    /**
+     * Clear the cache for type config
+     */
     public function flushConfig()
     {
         $this->cacheTypeList->cleanType('config');
         $this->_logger->debug('Config Flushed');
     }
 
-    public function updateCronStatus($data,$path)
+    /**
+     * Update the config status and clean cache for config
+     * @param $data
+     * @param $path
+     */
+    public function updateCronStatus($data, $path)
     {
-        if($data==true) {
-                $this->configWriter->save($path,1,
-                ScopeConfigInterface::SCOPE_TYPE_DEFAULT, 0);
-        }
-        else {
-                $this->configWriter->save($path,0,
-                ScopeConfigInterface::SCOPE_TYPE_DEFAULT, 0);
-        }
+        $this->configWriter->save(
+            $path,
+            ($data) ? 1 : 0,
+            ScopeConfigInterface::SCOPE_TYPE_DEFAULT,
+            0
+        );
         $this->flushConfig();
     }
 
     /**
      * @return \Psr\Log\LoggerInterface
      */
-    public function getLogger(){
+    public function getLogger()
+    {
         return $this->_logger;
     }
 
     /**
      * Trigger the disposable Hierarchy replication job to get Hierarchy based on stores.
      */
-    public function getHierarchyByStore(){
+    public function getHierarchyByStore()
+    {
 
-        $response = array();
+        $response = [];
 
-        $store_id       =   $this->_lsr->getDefaultWebStore();
+        $store_id = $this->_lsr->getDefaultWebStore();
 
 
         /** @var Entity\ReplEcommHierarchy $hierarchy */
-        $hierarchy      =   new Entity\ReplEcommHierarchy();
+        $hierarchy = new Entity\ReplEcommHierarchy();
 
         /** @var  Entity\ReplRequest $request */
-        $request          =     new Entity\ReplRequest();
+        $request = new Entity\ReplRequest();
 
-        /** @var Operation\ReplEcommHierarchy  $operation */
-        $operation      =   new Operation\ReplEcommHierarchy();
+        /** @var Operation\ReplEcommHierarchy $operation */
+        $operation = new Operation\ReplEcommHierarchy();
 
         $request->setStoreId($store_id)
-                ->setBatchSize(100)
-                ->setFullReplication(true)
-                ->setLastKey(0)
-                ->setMaxKey(0)
-                ->setTerminalId('');
+            ->setBatchSize(100)
+            ->setFullReplication(true)
+            ->setLastKey(0)
+            ->setMaxKey(0)
+            ->setTerminalId('');
 
 
-
-        $this->_logger->debug(var_export($operation->getResponse(),true));
+        $this->_logger->debug(var_export($operation->getResponse(), true));
 
         try {
             $response = $operation->execute($hierarchy->setReplRequest($request));
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->_logger->error($e->getMessage());
         }
         return $response ? $response->getResult() : $response;
-
     }
-
-
 }

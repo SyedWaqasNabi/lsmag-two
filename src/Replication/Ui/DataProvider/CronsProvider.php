@@ -1,10 +1,14 @@
 <?php
+
 namespace Ls\Replication\Ui\DataProvider;
 
 use Magento\Framework\View\Element\UiComponent\DataProvider\DataProviderInterface;
 use Magento\Ui\DataProvider\AbstractDataProvider;
 use Magento\Framework\App\Request\Http;
 use Magento\Framework\Api\SearchResultsInterface;
+use Magento\Framework\Module\Dir\Reader;
+use Magento\Framework\Xml\Parser;
+use Ls\Core\Model\LSR;
 
 /**
  * Class ProductDataProvider
@@ -26,13 +30,28 @@ class CronsProvider extends AbstractDataProvider implements DataProviderInterfac
      * @var \Magento\Framework\App\Request\Http
      */
     protected $request;
+    /**
+     * @var \Magento\Framework\Module\Dir\Reader
+     */
+    protected $moduleDirReader;
 
     /**
-     * Construct
-     *
+     * @var \Magento\Framework\Xml\Parser
+     */
+    private $parser;
+
+    /** @var LSR */
+    protected $_lsr;
+
+    /**
+     * CronsProvider constructor.
      * @param string $name
      * @param string $primaryFieldName
      * @param string $requestFieldName
+     * @param Http $request
+     * @param Reader $moduleDirReader
+     * @param Parser $parser
+     * @param LSR $LSR
      * @param array $meta
      * @param array $data
      */
@@ -41,12 +60,18 @@ class CronsProvider extends AbstractDataProvider implements DataProviderInterfac
         $primaryFieldName,
         $requestFieldName,
         Http $request,
+        Reader $moduleDirReader,
+        Parser $parser,
+        LSR $LSR,
         array $meta = [],
         array $data = []
     )
     {
         parent::__construct($name, $primaryFieldName, $requestFieldName, $meta, $data);
         $this->request = $request;
+        $this->moduleDirReader = $moduleDirReader;
+        $this->parser = $parser;
+        $this->_lsr = $LSR;
     }
 
     /**
@@ -56,28 +81,37 @@ class CronsProvider extends AbstractDataProvider implements DataProviderInterfac
      */
     public function getData()
     {
-        $items = array(
-            ['id' => "1", 'label' => 'Item', 'value' => 'Ls\Replication\Cron\ReplEcommItemsTask', 'condition' => 'Omni to Flat'],
-            ['id' => "2", 'label' => 'Barcode', 'value' => 'Ls\Replication\Cron\ReplEcommBarcodesTask', 'condition' => 'Omni to Flat'],
-            ['id' => "3", 'label' => 'Extended Variant Value', 'value' => 'Ls\Replication\Cron\ReplEcommExtendedVariantsTask', 'condition' => 'Omni to Flat'],
-            ['id' => "4", 'label' => 'Image Link', 'value' => 'Ls\Replication\Cron\ReplEcommImageLinksTask', 'condition' => 'Omni to Flat'],
-            ['id' => "5", 'label' => 'Item Varian Registration', 'value' => 'Ls\Replication\Cron\ReplEcommItemVariantRegistrationsTask', 'condition' => 'Omni to Flat'],
-            ['id' => "6", 'label' => 'Hierarchy', 'value' => 'Ls\Replication\Cron\ReplEcommHierarchyTask', 'condition' => 'Omni to Flat'],
-            ['id' => "7", 'label' => 'Hierarchy Node', 'value' => 'Ls\Replication\Cron\ReplEcommHierarchyNodeTask', 'condition' => 'Omni to Flat'],
-            ['id' => "8", 'label' => 'Hierarchy Leaf', 'value' => 'Ls\Replication\Cron\ReplEcommHierarchyLeafTask', 'condition' => 'Omni to Flat'],
-            ['id' => "9", 'label' => 'Attribute', 'value' => 'Ls\Replication\Cron\ReplEcommAttributeTask', 'condition' => 'Omni to Flat'],
-            ['id' => "10", 'label' => 'Attribute Value', 'value' => 'Ls\Replication\Cron\ReplEcommAttributeValueTask', 'condition' => 'Omni to Flat'],
-            ['id' => "11", 'label' => 'Attribute Option Value', 'value' => 'Ls\Replication\Cron\ReplEcommAttributeOptionValueTask', 'condition' => 'Omni to Flat'],
-            ['id' => "12", 'label' => 'Discount', 'value' => 'Ls\Replication\Cron\ReplEcommDiscountsTask', 'condition' => 'Omni to Flat'],
-            ['id' => "13", 'label' => 'Item Category', 'value' => 'Ls\Replication\Cron\ReplEcommItemCategoriesTask', 'condition' => 'Omni to Flat'],
-            ['id' => "14", 'label' => 'Product Group', 'value' => 'Ls\Replication\Cron\ReplEcommProductGroupsTask', 'condition' => 'Omni to Flat'],
-            ['id' => "15", 'label' => 'Stores', 'value' => 'Ls\Replication\Cron\ReplEcommStoresTask', 'condition' => 'Omni to Flat'],
-            ['id' => "16", 'label' => 'Attributes', 'value' => 'Ls\Replication\Cron\AttributesCreateTask', 'condition' => 'Flat to Magento'],
-            ['id' => "17", 'label' => 'Category', 'value' => 'Ls\Replication\Cron\CategoryCreateTask', 'condition' => 'Flat to Magento'],
-            ['id' => "18", 'label' => 'Products', 'value' => 'Ls\Replication\Cron\ProductCreateTask', 'condition' => 'Flat to Magento'],
-            ['id' => "19", 'label' => 'Barcode Update', 'value' => 'Ls\Replication\Cron\BarcodeUpdateTask', 'condition' => 'Flat to Magento'],
-            ['id' => "20", 'label' => 'Discount Create', 'value' => 'Ls\Replication\Cron\DiscountCreateTask', 'condition' => 'Flat to Magento'],
-        );
+        $cronsGroupListing = $this->readCronFile();
+        $condition = "";
+        $items = [];
+        $counter = 1;
+        $cronsGroupListing = array_reverse($cronsGroupListing);
+        $this->_lsr->flushConfig();
+        foreach ($cronsGroupListing as $cronlist) {
+            $fullReplicationStatus = $path = '';
+            if ($cronlist['_attribute']['id'] == "replication") {
+                $condition = __("Flat to Magento");
+            } elseif ($cronlist['_attribute']['id'] == "flat_replication") {
+                $condition = __("Omni to Flat");
+                $path = $this->_lsr::CRON_STATUS_PATH_PREFIX;
+            } else {
+                $condition = __("");
+            }
+            foreach ($cronlist['_value']['job'] as $joblist) {
+                if ($path != '') {
+                    $pathNew = $path . $joblist['_attribute']['name'];
+                    $fullReplicationStatus = $this->_lsr->getStoreConfig($pathNew);
+                }
+                $items[] = [
+                    'id' => $counter,
+                    'fullreplicationstatus' => ($fullReplicationStatus == 1) ? '<div class="flag-green custom-grid-flag">Complete</div>' : '<div class="flag-yellow custom-grid-flag">Pending</div>',
+                    'label' => $joblist['_attribute']['name'],
+                    'value' => $joblist['_attribute']['instance'],
+                    'condition' => $condition
+                ];
+                $counter++;
+            }
+        }
 
         $pagesize = intval($this->request->getParam('paging')['pageSize']);
         $pageCurrent = intval($this->request->getParam('paging')['current']);
@@ -87,6 +121,16 @@ class CronsProvider extends AbstractDataProvider implements DataProviderInterfac
             'totalRecords' => count($items),
             'items' => array_slice($items, $pageoffset, $pageoffset + $pagesize)
         ];
+    }
+
+    public function readCronFile()
+    {
+        try {
+            $filePath = $this->moduleDirReader->getModuleDir('etc', 'Ls_Replication') . '/crontab.xml';
+            $parsedArray = $this->parser->load($filePath)->xmlToArray();
+            return $parsedArray['config']['_value']['group'];
+        } catch (\Exception $e) {
+        }
     }
 
 
@@ -108,13 +152,9 @@ class CronsProvider extends AbstractDataProvider implements DataProviderInterfac
      */
     public function searchResultToOutput(SearchResultInterface $searchResult)
     {
-
     }
 
     public function getItems()
     {
-
     }
 }
-
-?>

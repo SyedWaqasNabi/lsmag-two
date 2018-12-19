@@ -12,9 +12,6 @@
     <job name="repl_products" instance="Ls\Replication\Cron\ProductCreateTask" method="execute">
       <schedule>*/5 * * * *</schedule>
     </job>
-    <job name="repl_barcode_update" instance="Ls\Replication\Cron\BarcodeUpdateTask" method="execute">
-      <schedule>*/5 * * * *</schedule>
-    </job>
     <job name="repl_discount_create" instance="Ls\Replication\Cron\DiscountCreateTask" method="execute">
       <schedule>*/5 * * * *</schedule>
     </job>
@@ -24,7 +21,7 @@
     <job name="repl_item" instance="Ls\Replication\Cron\ReplEcommItemsTask" method="execute">
       <schedule>*/2 * * * *</schedule>
     </job>
-    <job name="repl_item_price" instance="Ls\Replication\Cron\ReplEcommPricesTask" method="execute">
+    <job name="repl_price" instance="Ls\Replication\Cron\ReplEcommPricesTask" method="execute">
       <schedule>*/2 * * * *</schedule>
     </job>
     <job name="repl_barcode" instance="Ls\Replication\Cron\ReplEcommBarcodesTask" method="execute">
@@ -68,15 +65,6 @@
       <schedule>*/5 * * * *</schedule>
     </job>
     <job name="repl_store" instance="Ls\Replication\Cron\ReplEcommStoresTask" method="execute">
-      <schedule>*/5 * * * *</schedule>
-    </job>
-    <job name="repl_unit_of_measure" instance="Ls\Replication\Cron\ReplEcommUnitOfMeasuresTask" method="execute">
-      <schedule>*/5 * * * *</schedule>
-    </job>
-    <job name="repl_discount_validation" instance="Ls\Replication\Cron\ReplEcommDiscountValidationsTask" method="execute">
-      <schedule>*/5 * * * *</schedule>
-    </job>
-    <job name="repl_country_code" instance="Ls\Replication\Cron\ReplEcommCountryCodeTask" method="execute">
       <schedule>*/5 * * * *</schedule>
     </job>
   </group>

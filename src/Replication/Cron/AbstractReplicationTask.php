@@ -16,12 +16,14 @@ abstract class AbstractReplicationTask
 {
     /** @var array */
     static private $bypass_methods = ['getMaxKey', 'getLastKey', 'getRecordsRemaining'];
+
     /** @var array All those config path don't have no lastkey means always zero as LastKey */
     static private $no_lastkey_config_path = [
         'ls_mag/replication/repl_country_code',
         'ls_mag/replication/repl_shipping_agent',
         'ls_mag/replication/repl_store_tender_type',
     ];
+
     /** @var array Config path which needed web store id instead of empty */
     static private $store_id_needed = [
         'ls_mag/replication/repl_hierarchy',
@@ -32,39 +34,38 @@ abstract class AbstractReplicationTask
     ];
 
     /** @var array List of Replication Tables with unique field */
-    static private $jobCodeUniqueFieldArray = array(
-        "ls_mag/replication/repl_attribute" => array("Code"),
-        "ls_mag/replication/repl_attribute_option_value" => array("Code", "Sequence", "Value"),
-        "ls_mag/replication/repl_attribute_value" => array("Code", "LinkField1", "LinkField2", "LinkField3", "Value"),
-        "ls_mag/replication/repl_barcode" => array("nav_id"),
-        "ls_mag/replication/repl_country_code" => array("Name"),
-        "ls_mag/replication/repl_currency" => array("CurrencyCode"),
-        "ls_mag/replication/repl_currency_exch_rate" => array("CurrencyCode"),
-        "ls_mag/replication/repl_customer" => array("AccountNumber"),
-        "ls_mag/replication/repl_data_translation" => array("TranslationId"),
-        "ls_mag/replication/repl_discount" => array("ItemId", "LoyaltySchemeCode","OfferNo", "StoreId"),
-        "ls_mag/replication/repl_discount" => array("ItemId", "LoyaltySchemeCode", "StoreId"),
-        "ls_mag/replication/repl_discount_validation" => array("nav_id"),
-        "ls_mag/replication/repl_extended_variant_value" => array("Code", "FrameworkCode", "ItemId"),
-        "ls_mag/replication/repl_hierarchy" => array("nav_id"),
-        "ls_mag/replication/repl_hierarchy_leaf" => array("nav_id", "NodeId"),
-        "ls_mag/replication/repl_hierarchy_node" => array("nav_id"),
-        "ls_mag/replication/repl_image" => array("nav_id"),
-        "ls_mag/replication/repl_image_link" => array("ImageId", "KeyValue"),
-        "ls_mag/replication/repl_item" => array("nav_id"),
-        "ls_mag/replication/repl_item_category" => array("nav_id"),
-        "ls_mag/replication/repl_item_unit_of_measure" => array("Code", "ItemId"),
-        "ls_mag/replication/repl_item_variant_registration" => array("ItemId", "VariantId"),
-        "ls_mag/replication/repl_loy_vendor_item_mapping" => array("NavManufacturerId", "NavProductId"),
-        "ls_mag/replication/repl_price" => array("ItemId", "VariantId"),
-        "ls_mag/replication/repl_product_group" => array("nav_id"),
-        "ls_mag/replication/repl_shipping_agent" => array("Name"),
-        "ls_mag/replication/repl_store" => array("nav_id"),
-        "ls_mag/replication/repl_store_tender_type" => array("StoreID", "TenderTypeId"),
-        "ls_mag/replication/repl_unit_of_measure" => array("nav_id"),
-        "ls_mag/replication/repl_vendor" => array("Name"),
-        "ls_mag/replication/loy_item" => array("nav_id")
-    );
+    static private $jobCodeUniqueFieldArray = [
+        "ls_mag/replication/repl_attribute" => ["Code"],
+        "ls_mag/replication/repl_attribute_option_value" => ["Code", "Sequence", "Value"],
+        "ls_mag/replication/repl_attribute_value" => ["Code", "LinkField1", "LinkField2", "LinkField3", "Value"],
+        "ls_mag/replication/repl_barcode" => ["nav_id"],
+        "ls_mag/replication/repl_country_code" => ["Name"],
+        "ls_mag/replication/repl_currency" => ["CurrencyCode"],
+        "ls_mag/replication/repl_currency_exch_rate" => ["CurrencyCode"],
+        "ls_mag/replication/repl_customer" => ["AccountNumber"],
+        "ls_mag/replication/repl_data_translation" => ["TranslationId"],
+        "ls_mag/replication/repl_discount" => ["ItemId", "LoyaltySchemeCode", "OfferNo", "StoreId"],
+        "ls_mag/replication/repl_discount_validation" => ["nav_id"],
+        "ls_mag/replication/repl_extended_variant_value" => ["Code", "FrameworkCode", "ItemId", "Value"],
+        "ls_mag/replication/repl_hierarchy" => ["nav_id"],
+        "ls_mag/replication/repl_hierarchy_leaf" => ["nav_id", "NodeId"],
+        "ls_mag/replication/repl_hierarchy_node" => ["nav_id"],
+        "ls_mag/replication/repl_image" => ["nav_id"],
+        "ls_mag/replication/repl_image_link" => ["ImageId", "KeyValue"],
+        "ls_mag/replication/repl_item" => ["nav_id"],
+        "ls_mag/replication/repl_item_category" => ["nav_id"],
+        "ls_mag/replication/repl_item_unit_of_measure" => ["Code", "ItemId"],
+        "ls_mag/replication/repl_item_variant_registration" => ["ItemId", "VariantId"],
+        "ls_mag/replication/repl_loy_vendor_item_mapping" => ["NavManufacturerId", "NavProductId"],
+        "ls_mag/replication/repl_price" => ["ItemId", "VariantId"],
+        "ls_mag/replication/repl_product_group" => ["nav_id"],
+        "ls_mag/replication/repl_shipping_agent" => ["Name"],
+        "ls_mag/replication/repl_store" => ["nav_id"],
+        "ls_mag/replication/repl_store_tender_type" => ["StoreID", "TenderTypeId"],
+        "ls_mag/replication/repl_unit_of_measure" => ["nav_id"],
+        "ls_mag/replication/repl_vendor" => ["Name"],
+        "ls_mag/replication/loy_item" => ["nav_id"]
+    ];
 
     /** @var LoggerInterface */
     protected $logger;
@@ -80,7 +81,8 @@ abstract class AbstractReplicationTask
     protected $properties = null;
     /** @var RepHelper */
     protected $rep_helper;
-
+    /** @var integer */
+    protected $recordsRemaining = 0;
 
     /**
      * AbstractReplicationTask constructor.
@@ -121,8 +123,9 @@ abstract class AbstractReplicationTask
             $isFirstTime = $this->isFirstTime();
             if (isset($isFirstTime) && $isFirstTime == 1) {
                 $fullReplication = 0;
-                if ($this->isLastKeyAlwaysZero())
+                if ($this->isLastKeyAlwaysZero()) {
                     return;
+                }
             }
             $batchSize = 100;
             $isBatchSizeSet = $lsr->getStoreConfig(LSR::SC_REPLICATION_DEFAULT_BATCHSIZE);
@@ -138,43 +141,55 @@ abstract class AbstractReplicationTask
             } else {
                 $webStoreID = $lsr->getStoreConfig(LSR::SC_SERVICE_STORE);
             }
-            while ($remaining != 0) {
-                $request = $this->makeRequest($last_key, $fullReplication, $batchSize, $webStoreID);
-                $response = $request->execute();
-                $result = $response->getResult();
-                $last_key = $result->getLastKey();
-                $remaining = $result->getRecordsRemaining();
-                $traversable = $this->getIterator($result);
-                if (!is_null($traversable)) {
-                    if (count($traversable) > 0) {
-                        foreach ($traversable as $source) {
-                            $this->saveSource($properties, $source);
-                        }
-                    } else {
-                        $arrayTraversable = (array)$traversable;
-                        if (count($arrayTraversable) > 0) {
-                            $entityClass = new ReflectionClass($this->getMainEntity());
-                            $singleObject = (object)$traversable->getArrayCopy();
+            $request = $this->makeRequest($last_key, $fullReplication, $batchSize, $webStoreID);
+            $response = $request->execute();
+            $result = $response->getResult();
+            $last_key = $result->getLastKey();
+            $remaining = $result->getRecordsRemaining();
+            $this->recordsRemaining = $remaining;
+            $traversable = $this->getIterator($result);
+            if (!is_null($traversable)) {
+                if (count($traversable) > 0) {
+                    foreach ($traversable as $source) {
+                        $this->saveSource($properties, $source);
+                    }
+                    $this->updateSuccessStatus();
+                } else {
+                    $arrayTraversable = (array)$traversable;
+                    if (count($arrayTraversable) > 0) {
+                        $entityClass = new ReflectionClass($this->getMainEntity());
+                        $singleObject = (object)$traversable->getArrayCopy();
+                        $uniqueAttributes = self::$jobCodeUniqueFieldArray[$this->getConfigPath()];
+                        $entityArray = $this->checkEntityExistByAttributes($uniqueAttributes, $singleObject, true);
+                        if (!empty($entityArray)) {
+                            foreach ($entityArray as $value) {
+                                $entity = $value;
+                            }
+                            $entity->setIsUpdated(1);
+                        } else {
                             $entity = $this->getFactory()->create();
                             $entity->setScope('default')->setScopeId(0);
-                            foreach ($singleObject as $keyprop => $valueprop) {
-                                if ($keyprop == 'Id') {
-                                    $set_method = 'setNavId';
-                                } else {
-                                    $set_method = "set$keyprop";
-                                }
-                                $entity->{$set_method}($valueprop);
-                            }
-                            try {
-                                $this->getRepository()->save($entity);
-                            } catch (\Exception $e) {
-                                $this->logger->debug($e->getMessage());
-                            }
                         }
+                        foreach ($singleObject as $keyprop => $valueprop) {
+                            if ($keyprop == 'Id') {
+                                $set_method = 'setNavId';
+                            } else {
+                                $set_method = "set$keyprop";
+                            }
+                            $entity->{$set_method}($valueprop);
+                        }
+                        try {
+                            $this->getRepository()->save($entity);
+                        } catch (\Exception $e) {
+                            $this->logger->debug($e->getMessage());
+                        }
+                        $this->updateSuccessStatus();
                     }
                 }
                 $this->persistLastKey($last_key);
-                $this->saveReplicationStatus(1);
+                if ($remaining == 0) {
+                    $this->saveReplicationStatus(1);
+                }
             }
             $this->rep_helper->flushConfig();
         } else {
@@ -185,7 +200,21 @@ abstract class AbstractReplicationTask
     function executeManually()
     {
         $this->execute();
-        return array(0);
+        return [$this->recordsRemaining];
+    }
+
+    /**
+     * Update the Custom Replication Success Status
+     */
+    protected function updateSuccessStatus()
+    {
+        $confPath = $this->getConfigPath();
+        if ($confPath == "ls_mag/replication/repl_attribute" || $confPath == "ls_mag/replication/repl_extended_variant_value")
+            $this->rep_helper->updateCronStatus(false, LSR::SC_SUCCESS_CRON_ATTRIBUTE);
+        elseif ($confPath == "ls_mag/replication/repl_hierarchy_node")
+            $this->rep_helper->updateCronStatus(false, LSR::SC_SUCCESS_CRON_CATEGORY);
+        elseif ($confPath == "ls_mag/replication/repl_item")
+            $this->rep_helper->updateCronStatus(false, LSR::SC_SUCCESS_CRON_PRODUCT);
     }
 
     protected function toObject(array $array, $object)
@@ -208,8 +237,8 @@ abstract class AbstractReplicationTask
     protected function saveSource($properties, $source)
     {
         $uniqueAttributes = self::$jobCodeUniqueFieldArray[$this->getConfigPath()];
-        if ($this->checkEntityExistByAttributes($uniqueAttributes, $source)) {
-            $entityArray = $this->checkEntityExistByAttributes($uniqueAttributes, $source);
+        $entityArray = $this->checkEntityExistByAttributes($uniqueAttributes, $source);
+        if (!empty($entityArray)) {
             foreach ($entityArray as $value) {
                 $entity = $value;
             }
@@ -240,7 +269,7 @@ abstract class AbstractReplicationTask
     /**
      * @return string[]
      */
-    protected final function getProperties()
+    final protected function getProperties()
     {
         if (is_null($this->properties)) {
             $reflected_entity = new ReflectionClass($this->getMainEntity());
@@ -255,29 +284,40 @@ abstract class AbstractReplicationTask
     }
 
     /**
+     * Check the Entity exist or not
      * @param $uniqueAttributes
      * @param $source
-     * @return bool
+     * @param $notAnArraysObject
+     * @return bool | array
      */
-    protected function checkEntityExistByAttributes($uniqueAttributes, $source)
+    protected function checkEntityExistByAttributes($uniqueAttributes, $source, $notAnArraysObject = false)
     {
         // TODO create SearchCriteria Instance
         $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
         $criteria = $objectManager->get('Magento\Framework\Api\SearchCriteriaBuilder');
-        try {
-            foreach ($uniqueAttributes as $attribute) {
-                if ($attribute == 'nav_id') {
-                    $get_method = 'getId';
-                } else {
-                    $get_method = "get$attribute";
-                }
-                $criteria->addFilter($attribute, $source->{$get_method}());
+        foreach ($uniqueAttributes as $attribute) {
+            if ($attribute == 'nav_id') {
+                $get_method = 'getId';
+            } else {
+                $get_method = "get$attribute";
             }
-            $result = $this->getRepository()->getList($criteria->create());
-            return $result->getItems();
-        } catch (\Magento\Framework\Exception\NoSuchEntityException $e) {
-            return false;
+            if ($notAnArraysObject) {
+                foreach ($source as $keyprop => $valueprop) {
+                    if ($get_method == 'get' . $keyprop) {
+                        $sourceValue = $valueprop;
+                        break;
+                    }
+                }
+            } else {
+                $sourceValue = $source->{$get_method}();
+            }
+            if ($sourceValue == "")
+                $criteria->addFilter($attribute, true, 'null');
+            else
+                $criteria->addFilter($attribute, $sourceValue);
         }
+        $result = $this->getRepository()->getList($criteria->create());
+        return $result->getItems();
     }
 
     /**
@@ -303,8 +343,9 @@ abstract class AbstractReplicationTask
     {
         if (in_array($this->getConfigPath(), self::$no_lastkey_config_path)) {
             return true;
-        } else
+        } else {
             return false;
+        }
     }
 
     /**
@@ -328,8 +369,12 @@ abstract class AbstractReplicationTask
      */
     protected function persistLastKey($last_key)
     {
-        $this->resource_config->saveConfig($this->getConfigPath(), $last_key,
-            ScopeConfigInterface::SCOPE_TYPE_DEFAULT, 0);
+        $this->resource_config->saveConfig(
+            $this->getConfigPath(),
+            $last_key,
+            ScopeConfigInterface::SCOPE_TYPE_DEFAULT,
+            0
+        );
     }
 
     /**
@@ -337,8 +382,12 @@ abstract class AbstractReplicationTask
      */
     protected function saveReplicationStatus($status = 0)
     {
-        $this->resource_config->saveConfig($this->getConfigPathStatus(), $status,
-            ScopeConfigInterface::SCOPE_TYPE_DEFAULT, 0);
+        $this->resource_config->saveConfig(
+            $this->getConfigPathStatus(),
+            $status,
+            ScopeConfigInterface::SCOPE_TYPE_DEFAULT,
+            0
+        );
     }
 
     /**

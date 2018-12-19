@@ -2,7 +2,7 @@
 
 namespace Ls\Replication\Cron;
 
-
+use Ls\Omni\Client\Ecommerce\Entity\ReplEcommPrices;
 use Ls\Replication\Model\ReplImageLink;
 use Ls\Replication\Model\ReplImageLinkRepository;
 use Magento\Eav\Model\Config;
@@ -217,23 +217,17 @@ class ProductCreateTask
      */
     public function execute()
     {
-        $fullReplicationAttributeStatus = $this->_lsr->getStoreConfig(ReplEcommAttributeTask::CONFIG_PATH_STATUS);
-        $fullReplicationAttributeOptionValueStatus = $this->_lsr->getStoreConfig(ReplEcommAttributeValueTask::CONFIG_PATH_STATUS);
-
-        $CronCategoryCheck = $this->_lsr->getStoreConfig(LSR::SC_SUCCESS_CRON_CATEGORY);
-        $CronAttributeCheck = $this->_lsr->getStoreConfig(LSR::SC_SUCCESS_CRON_ATTRIBUTE);
-        $productBatchSize = $this->_lsr->getStoreConfig(LSR::SC_REPLICATION_PRODUCT_BATCHSIZE);
-
-
-        if ($CronCategoryCheck == 1 && $CronAttributeCheck == 1) {
-            if ($fullReplicationAttributeStatus != 1 && $fullReplicationAttributeOptionValueStatus != 1)
-                return;
-
-
+        $fullReplicationImageLinkStatus = $this->_lsr->getStoreConfig(ReplEcommImageLinksTask::CONFIG_PATH_STATUS);
+        $fullReplicationBarcodsStatus = $this->_lsr->getStoreConfig(ReplEcommBarcodesTask::CONFIG_PATH_STATUS);
+        $fullReplicationPriceStatus = $this->_lsr->getStoreConfig(ReplEcommPricesTask::CONFIG_PATH_STATUS);
+        $cronCategoryCheck = $this->_lsr->getStoreConfig(LSR::SC_SUCCESS_CRON_CATEGORY);
+        $cronAttributeCheck = $this->_lsr->getStoreConfig(LSR::SC_SUCCESS_CRON_ATTRIBUTE);
+        $cronAttributeVariantCheck = $this->_lsr->getStoreConfig(LSR::SC_SUCCESS_CRON_ATTRIBUTE_VARIANT);
+        if ($cronCategoryCheck == 1 && $cronAttributeCheck == 1 && $cronAttributeVariantCheck == 1 && $fullReplicationImageLinkStatus == 1 && $fullReplicationBarcodsStatus == 1 && $fullReplicationPriceStatus == 1) {
             $this->logger->debug('Running ProductCreateTask');
+            $productBatchSize = $this->_lsr->getStoreConfig(LSR::SC_REPLICATION_PRODUCT_BATCHSIZE);
             /** @var \Magento\Framework\Api\SearchCriteria $criteria */
             $criteria = $this->replicationHelper->buildCriteriaForNewItems('', '', '', $productBatchSize);
-
             /** @var \Ls\Replication\Model\ReplItemSearchResults $items */
             $items = $this->itemRepository->getList($criteria);
 
@@ -241,35 +235,23 @@ class ProductCreateTask
             foreach ($items->getItems() as $item) {
                 try {
                     $productData = $this->productRepository->get($item->getNavId());
-                    if ($item->getIsUpdated() == 1) {
-                        try {
-                            $productData->setName($item->getDescription());
-                            $productData->setMetaTitle($item->getDescription());
-                            $productData->setDescription($item->getDetails());
-                            $productData->setCustomAttribute("uom", $item->getBaseUnitOfMeasure());
-                            $itemPrice = $this->getItemPrice($item->getNavId());
-                            if (isset($itemPrice))
-                                $productData->setPrice($itemPrice->getUnitPrice());
-                            else
-                                $productData->setPrice($item->getUnitPrice());
-                            $productImages = $this->replicationHelper->getImageLinksByType($item->getNavId(), 'Item');
-                            if ($productImages) {
-                                $this->logger->debug('Found images for the item ' . $item->getNavId());
-                                $productData->setMediaGalleryEntries($this->getMediaGalleryEntries($productImages));
-                            }
-                            $productData->save();
-                            $item->setData('is_updated', '0');
-                            $item->setData('processed', '1');
-                            $this->itemRepository->save($item);
-                            $this->cronStatus = true;
-                        } catch (\Exception $e) {
-                            $this->logger->debug($e->getMessage());
+                    try {
+                        $productData->setName($item->getDescription());
+                        $productData->setMetaTitle($item->getDescription());
+                        $productData->setDescription($item->getDetails());
+                        $productData->setCustomAttribute("uom", $item->getBaseUnitOfMeasure());
+                        $productImages = $this->replicationHelper->getImageLinksByType($item->getNavId(), 'Item');
+                        if ($productImages) {
+                            $this->logger->debug('Found images for the item ' . $item->getNavId());
+                            $productData->setMediaGalleryEntries($this->getMediaGalleryEntries($productImages));
                         }
-                    } else if ($item->getIsUpdated() == 0 && $item->getProcessed() == 0) {
+                        $product = $this->getProductAttributes($productData, $item);
+                        $this->productRepository->save($product);
                         $item->setData('is_updated', '0');
                         $item->setData('processed', '1');
                         $this->itemRepository->save($item);
-                        $this->cronStatus = true;
+                    } catch (\Exception $e) {
+                        $this->logger->debug($e->getMessage());
                     }
                 } catch (\Magento\Framework\Exception\NoSuchEntityException $e) {
                     /** @var \Magento\Catalog\Api\Data\ProductInterface $product */
@@ -282,10 +264,11 @@ class ProductCreateTask
                     $product->setWeight(10);
                     $product->setDescription($item->getDetails());
                     $itemPrice = $this->getItemPrice($item->getNavId());
-                    if (isset($itemPrice))
+                    if (isset($itemPrice)) {
                         $product->setPrice($itemPrice->getUnitPrice());
-                    else
+                    } else {
                         $product->setPrice($item->getUnitPrice());
+                    }
                     $product->setAttributeSetId(4);
                     $product->setStatus(\Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_ENABLED);
                     $product->setTypeId(\Magento\Catalog\Model\Product\Type::TYPE_SIMPLE);
@@ -295,11 +278,11 @@ class ProductCreateTask
                     if (isset($itemBarcodes[$item->getNavId()])) {
                         $product->setCustomAttribute("barcode", $itemBarcodes[$item->getNavId()]);
                     }
-                    $product->setStockData(array(
+                    $product->setStockData([
                         'use_config_manage_stock' => 1,
                         'is_in_stock' => 1,
                         'qty' => 100
-                    ));
+                    ]);
                     $productImages = $this->replicationHelper->getImageLinksByType($item->getNavId(), 'Item');
                     if ($productImages) {
                         $this->logger->debug('Found images for the item ' . $item->getNavId());
@@ -316,21 +299,22 @@ class ProductCreateTask
                     }
                     $item->setData('processed', '1');
                     $this->itemRepository->save($item);
-                    $this->cronStatus = true;
                 }
             }
-            if (count($items->getItems()) == 0)
+            if (count($items->getItems()) == 0) {
                 $this->assignProductToCategory();
-            $fullReplicationVariantStatus = $this->_lsr->getStoreConfig(ReplEcommItemVariantRegistrationsTask::CONFIG_PATH_STATUS);
-            if ($fullReplicationVariantStatus == 1)
-                $this->updateVariantsOnly();
-            $fullReplicationImageLinkStatus = $this->_lsr->getStoreConfig(ReplEcommImageLinksTask::CONFIG_PATH_STATUS);
-            if ($fullReplicationImageLinkStatus == 1)
+                $this->cronStatus = true;
+                $fullReplicationVariantStatus = $this->_lsr->getStoreConfig(ReplEcommItemVariantRegistrationsTask::CONFIG_PATH_STATUS);
+                if ($fullReplicationVariantStatus == 1) {
+                    $this->updateVariantsOnly();
+                }
                 $this->updateImagesOnly();
+                $this->updateBarcodeOnly();
+                $this->updatePriceOnly();
+            }
             $this->logger->debug('End ProductCreateTask');
-            $this->cronStatus = true;
         } else {
-            $this->logger->debug("Product Replication cron fails because category or attribute replication cron not executed successfully.");
+            $this->logger->debug("Product Replication cron fails because custom category, custom attribute or full image replication cron not executed successfully.");
         }
         $this->replicationHelper->updateCronStatus($this->cronStatus, LSR::SC_SUCCESS_CRON_PRODUCT);
     }
@@ -344,7 +328,7 @@ class ProductCreateTask
         $criteria = $this->replicationHelper->buildCriteriaForNewItems('', '', '', -1);
         $items = $this->itemRepository->getList($criteria);
         $itemsLeftToProcess = count($items->getItems());
-        return array($itemsLeftToProcess);
+        return [$itemsLeftToProcess];
     }
 
     /**
@@ -391,14 +375,14 @@ class ProductCreateTask
      */
     private function getMediaGalleryEntries($productImages)
     {
-        $galleryArray = array();
+        $galleryArray = [];
         $i = 0;
         /** @var \Ls\Replication\Model\ReplImageLink $image */
         foreach ($productImages as $image) {
-            $imageSize = array(
+            $imageSize = [
                 'height' => $this->_lsr::DEFAULT_IMAGE_HEIGHT,
                 'width' => $this->_lsr::DEFAULT_IMAGE_WIDTH
-            );
+            ];
             /** @var \Ls\Omni\Client\Ecommerce\Entity\ImageSize $imageSizeObject */
             $imageSizeObject = $this->loyaltyHelper->getImageSize($imageSize);
             $result = $this->loyaltyHelper->getImageById($image->getImageId(), $imageSizeObject);
@@ -413,11 +397,11 @@ class ProductCreateTask
                     ->setPosition($i)
                     ->setDisabled(false)
                     ->setTypes(
-                        array(
+                        [
                             "image",
                             "small_image",
                             "thumbnail"
-                        )
+                        ]
                     )->setContent($imageContent);
                 $galleryArray[] = $this->attributeMediaGalleryEntry;
                 $image->setData('processed', '1');
@@ -434,13 +418,15 @@ class ProductCreateTask
      */
     private function findCategoryIdFromFactory($productGroupId)
     {
-        $categoryCollection = $this->categoryCollectionFactory->create()->addAttributeToFilter('nav_id',
-            $productGroupId)->setPageSize(1);
+        $categoryCollection = $this->categoryCollectionFactory->create()->addAttributeToFilter(
+            'nav_id',
+            $productGroupId
+        )->setPageSize(1);
         if ($categoryCollection->getSize()) {
-            return array(
+            return [
                 $categoryCollection->getFirstItem()->getParentId(),
                 $categoryCollection->getFirstItem()->getId()
-            );
+            ];
         }
     }
 
@@ -454,10 +440,10 @@ class ProductCreateTask
             $this->logger->debug("Hierarchy Code not defined in the configuration.");
             return;
         }
-        $filters = array(
-            array('field' => 'NodeId', 'value' => true, 'condition_type' => 'notnull'),
-            array('field' => 'HierarchyCode', 'value' => $hierarchyCode, 'condition_type' => 'eq')
-        );
+        $filters = [
+            ['field' => 'NodeId', 'value' => true, 'condition_type' => 'notnull'],
+            ['field' => 'HierarchyCode', 'value' => $hierarchyCode, 'condition_type' => 'eq']
+        ];
         $criteria = $this->replicationHelper->buildCriteriaForArray($filters, 100);
         /** @var \Ls\Replication\Model\ReplHierarchyLeafSearchResults $replHierarchyLeafRepository */
         $replHierarchyLeafRepository = $this->replHierarchyLeafRepository->getList($criteria);
@@ -492,9 +478,19 @@ class ProductCreateTask
      */
     protected function oSlug($string)
     {
-        return strtolower(trim(preg_replace('~[^0-9a-z]+~i', '-',
-            html_entity_decode(preg_replace('~&([a-z]{1,2})(?:acute|cedil|circ|grave|lig|orn|ring|slash|th|tilde|uml);~i',
-                '$1', htmlentities($string, ENT_QUOTES, 'UTF-8')), ENT_QUOTES, 'UTF-8')), '-'));
+        return strtolower(trim(preg_replace(
+            '~[^0-9a-z]+~i',
+            '-',
+            html_entity_decode(
+                preg_replace(
+                    '~&([a-z]{1,2})(?:acute|cedil|circ|grave|lig|orn|ring|slash|th|tilde|uml);~i',
+                    '$1',
+                    htmlentities($string, ENT_QUOTES, 'UTF-8')
+                ),
+                ENT_QUOTES,
+                'UTF-8'
+            )
+        ), '-'));
     }
 
     /**
@@ -565,7 +561,7 @@ class ProductCreateTask
     protected function _getBarcode($itemId)
     {
         $searchCriteria = $this->searchCriteriaBuilder->addFilter('ItemId', $itemId)->create();
-        $allBarCodes = array();
+        $allBarCodes = [];
         /** @var ReplBarcodeRepository $itemBarcodes */
         $itemBarcodes = $this->replBarcodeRepository->getList($searchCriteria)->getItems();
         foreach ($itemBarcodes as $itemBarcode) {
@@ -584,7 +580,7 @@ class ProductCreateTask
     protected function _getItem($itemId)
     {
         $searchCriteria = $this->searchCriteriaBuilder->addFilter('nav_id', $itemId)->create();
-        $items = array();
+        $items = [];
         /** @var ReplItemRepository $items */
         $items = $this->itemRepository->getList($searchCriteria)->getItems();
         foreach ($items as $item) {
@@ -597,16 +593,16 @@ class ProductCreateTask
      * @param $itemId
      * @return mixed
      */
-    protected function getItemPrice($itemId, $variantId = NULL)
+    protected function getItemPrice($itemId, $variantId = null)
     {
         $storeId = $this->_lsr->getStoreConfig(LSR::SC_SERVICE_STORE);
-        $filters = array(
-            array('field' => 'ItemId', 'value' => $itemId, 'condition_type' => 'eq'),
-            array('field' => 'StoreId', 'value' => $storeId, 'condition_type' => 'eq'),
-            array('field' => 'QtyPerUnitOfMeasure', 'value' => 0, 'condition_type' => 'eq'),
+        $filters = [
+            ['field' => 'ItemId', 'value' => $itemId, 'condition_type' => 'eq'],
+            ['field' => 'StoreId', 'value' => $storeId, 'condition_type' => 'eq'],
+            ['field' => 'QtyPerUnitOfMeasure', 'value' => 0, 'condition_type' => 'eq'],
             //array('field' => 'VariantId', 'value' => $variantId, 'condition_type' => 'eq')
-        );
-        $items = array();
+        ];
+        $items = [];
         $searchCriteria = $this->replicationHelper->buildCriteriaForArray($filters, 1);
         /** @var ReplPriceRepository $items */
         $items = $this->replPriceRepository->getList($searchCriteria)->getItems();
@@ -620,9 +616,9 @@ class ProductCreateTask
      */
     protected function updateVariantsOnly()
     {
-        $filters = array(
-            array('field' => 'ItemId', 'value' => true, 'condition_type' => 'notnull')
-        );
+        $filters = [
+            ['field' => 'ItemId', 'value' => true, 'condition_type' => 'notnull']
+        ];
         $variants = $this->getUpdatedProductVariants($filters);
         if (count($variants) > 0) {
             try {
@@ -649,9 +645,9 @@ class ProductCreateTask
      */
     protected function updateImagesOnly()
     {
-        $filters = array(
-            array('field' => 'TableName', 'value' => 'Item%', 'condition_type' => 'like')
-        );
+        $filters = [
+            ['field' => 'TableName', 'value' => 'Item%', 'condition_type' => 'like']
+        ];
         $criteria = $this->replicationHelper->buildCriteriaGetUpdatedOnly($filters);
         $images = $this->replImageLinkRepositoryInterface->getList($criteria)->getItems();
         if (count($images) > 0) {
@@ -663,10 +659,11 @@ class ProductCreateTask
                         $item = str_replace(',', '-', $item);
                         /** @var ProductRepositoryInterface $productData */
                         $productData = $this->productRepository->get($item);
-                        $galleryImage = array($image);
+                        $galleryImage = [$image];
                         $productData->setMediaGalleryEntries($this->getMediaGalleryEntries($galleryImage));
                         $this->productRepository->save($productData);
                         $image->setData('is_updated', '0');
+                        $image->setData('processed', '1');
                         $this->replImageLinkRepositoryInterface->save($image);
                     }
                 } catch (\Magento\Framework\Exception\NoSuchEntityException $e) {
@@ -676,6 +673,68 @@ class ProductCreateTask
         }
     }
 
+    /**
+     * Update the modified/added barcode of the items & item variants
+     */
+    protected function updateBarcodeOnly()
+    {
+        $cronProductCheck = $this->_lsr->getStoreConfig(LSR::SC_SUCCESS_CRON_PRODUCT);
+        if ($cronProductCheck == 1) {
+            $criteria = $this->replicationHelper->buildCriteriaForNewItems();
+            /** @var \Ls\Replication\Model\ReplBarcodeSearchResults $replBarcodes */
+            $replBarcodes = $this->replBarcodeRepository->getList($criteria);
+            /** @var \Ls\Replication\Model\ReplBarcode $replBarcode */
+            foreach ($replBarcodes->getItems() as $replBarcode) {
+                try {
+                    if (!$replBarcode->getVariantId()) {
+                        $sku = $replBarcode->getItemId();
+                    } else {
+                        $sku = $replBarcode->getItemId() . '-' . $replBarcode->getVariantId();
+                    }
+                    $productData = $this->productRepository->get($sku);
+                    if (isset($productData)) {
+                        $productData->setCustomAttribute("barcode", $replBarcode->getNavId());
+                        $this->productRepository->save($productData);
+                        $replBarcode->setData('is_updated', '0');
+                        $replBarcode->setData('processed', '1');
+                        $this->replBarcodeRepository->save($replBarcode);
+                    }
+                } catch (\Exception $e) {
+                    $this->logger->debug($e->getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * Update the modified price of the items & item variants
+     */
+    protected function updatePriceOnly()
+    {
+        $criteria = $this->replicationHelper->buildCriteriaGetUpdatedOnly();
+        /** @var \Ls\Replication\Model\ReplPriceSearchResults $replPrices */
+        $replPrices = $this->replPriceRepository->getList($criteria);
+        /** @var \Ls\Replication\Model\ReplPrice $replPrice */
+        foreach ($replPrices->getItems() as $replPrice) {
+            try {
+                if (!$replPrice->getVariantId()) {
+                    $sku = $replPrice->getItemId();
+                } else {
+                    $sku = $replPrice->getItemId() . '-' . $replPrice->getVariantId();
+                }
+                $productData = $this->productRepository->get($sku);
+                if (isset($productData)) {
+                    $productData->setPrice($replPrice->getUnitPrice());
+                    $this->productRepository->save($productData);
+                    $replPrice->setData('is_updated', '0');
+                    $replPrice->setData('processed', '1');
+                    $this->replPriceRepository->save($replPrice);
+                }
+            } catch (\Exception $e) {
+                $this->logger->debug($e->getMessage());
+            }
+        }
+    }
 
     /** For product variants, get image from item_image_link with type item variant
      * @param $configProduct
@@ -692,9 +751,9 @@ class ProductCreateTask
         // get those attribute codes which are assigned to product.
         $attributesCode = $this->_getAttributesCodes($item->getNavId());
         $this->logger->debug('Attribute code array');
-        $attributesIds = array();
-        $associatedProductIds = array();
-        $configurableProductsData = array();
+        $attributesIds = [];
+        $associatedProductIds = [];
+        $configurableProductsData = [];
         foreach ($attributesCode as $value) {
             /** @var \Magento\Catalog\Model\ResourceModel\Eav\Attribute\Interceptor $attribute */
             $attribute = $this->eavConfig->getAttribute('catalog_product', $value);
@@ -708,25 +767,25 @@ class ProductCreateTask
             $sku = $value->getItemId() . '-' . $value->getVariantId();
             try {
                 $productData = $this->productRepository->get($sku);
-                if ($value->getIsUpdated() == 1) {
-                    try {
-                        $productData->setName($value->getDescription());
-                        $productData->setMetaTitle($value->getDescription());
-                        $productData->setDescription($value->getDetails());
-                        $productData->setCustomAttribute("uom", $value->getBaseUnitOfMeasure());
-                        $itemPrice = $this->getItemPrice($value->getItemId(), $value->getVariantId());
-                        if (isset($itemPrice))
-                            $productData->setPrice($itemPrice->getUnitPrice());
-                        $productImages = $this->replicationHelper->getImageLinksByType($value->getItemId() . ',' . $value->getVariantId(), 'Item Variant');
-                        if ($productImages) {
-                            $productData->setMediaGalleryEntries($this->getMediaGalleryEntries($productImages));
-                        }
-                        $productData->save();
-                        $value->setData('is_updated', '0');
-                        $this->replItemVariantRegistrationRepository->save($value);
-                    } catch (\Exception $e) {
-                        $this->logger->debug($e->getMessage());
+                try {
+                    $productData->setName($value->getDescription());
+                    $productData->setMetaTitle($value->getDescription());
+                    $productData->setDescription($value->getDetails());
+                    $productData->setCustomAttribute("uom", $value->getBaseUnitOfMeasure());
+                    $itemPrice = $this->getItemPrice($value->getItemId(), $value->getVariantId());
+                    if (isset($itemPrice)) {
+                        $productData->setPrice($itemPrice->getUnitPrice());
                     }
+                    $productImages = $this->replicationHelper->getImageLinksByType($value->getItemId() . ',' . $value->getVariantId(), 'Item Variant');
+                    if ($productImages) {
+                        $productData->setMediaGalleryEntries($this->getMediaGalleryEntries($productImages));
+                    }
+                    $productData->save();
+                    $value->setData('processed', '1');
+                    $value->setData('is_updated', '0');
+                    $this->replItemVariantRegistrationRepository->save($value);
+                } catch (\Exception $e) {
+                    $this->logger->debug($e->getMessage());
                 }
             } catch (\Magento\Framework\Exception\NoSuchEntityException $e) {
                 // check which attributes are available to be set as variant option.
@@ -742,10 +801,11 @@ class ProductCreateTask
                 $productV->setName($item->getDescription() . (($d1) ? '-' . $d1 : '') . (($d2) ? '-' . $d2 : '') . (($d3) ? '-' . $d3 : ''));
                 $productV->setSku($sku);
                 $itemPrice = $this->getItemPrice($value->getItemId(), $value->getVariantId());
-                if (isset($itemPrice))
+                if (isset($itemPrice)) {
                     $productV->setPrice($itemPrice->getUnitPrice());
-                else
+                } else {
                     $productV->setPrice($item->getUnitPrice());
+                }
                 $productV->setAttributeSetId(4);
                 $productV->setWebsiteIds([1]);
                 $productV->setVisibility(\Magento\Catalog\Model\Product\Visibility::VISIBILITY_NOT_VISIBLE);
@@ -769,12 +829,12 @@ class ProductCreateTask
                 if (isset($itemBarcodes[$sku])) {
                     $productV->setCustomAttribute("barcode", $itemBarcodes[$sku]);
                 }
-                $productV->setStockData(array(
+                $productV->setStockData([
                     'use_config_manage_stock' => 1,
                     'is_in_stock' => 1,
                     'is_qty_decimal' => 0,
                     'qty' => 100
-                ));
+                ]);
                 /** @var \Magento\Catalog\Api\Data\ProductInterface $productSaved */
                 $productSaved = $this->productRepository->save($productV);
                 $associatedProductIds[] = $productSaved->getId();
@@ -785,11 +845,11 @@ class ProductCreateTask
         }
         $productId = $configProduct->getId();
         foreach ($attributesIds as $attributeKey => $attributeId) {
-            $data = array(
+            $data = [
                 'attribute_id' => $attributeId,
                 'product_id' => $productId,
                 'position' => $attributeKey
-            );
+            ];
             try {
                 $this->attribute->setData($data)->save();
             } catch (\Exception $e) {

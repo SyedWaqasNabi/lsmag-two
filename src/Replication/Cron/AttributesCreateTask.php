@@ -13,7 +13,6 @@ use Psr\Log\LoggerInterface;
 use Ls\Replication\Helper\ReplicationHelper;
 use Ls\Core\Model\LSR;
 
-
 class AttributesCreateTask
 {
 
@@ -54,8 +53,11 @@ class AttributesCreateTask
      */
     protected $logger;
 
-    /** @var Cron Checking */
-    protected $cronStatus = false;
+    /** @var Success Cron Attribute */
+    protected $successCronAttribute = false;
+
+    /** @var Success Cron Attribute Variant */
+    protected $successCronAttributeVariant = false;
 
     /**
      * AttributesCreateTask constructor.
@@ -80,9 +82,7 @@ class AttributesCreateTask
         \Magento\Eav\Model\Config $eavConfig,
         ReplicationHelper $replicationHelper,
         LSR $LSR
-
-    )
-    {
+    ) {
         $this->replExtendedVariantValueRepository = $replExtendedVariantValueRepository;
         $this->productAttributeRepository = $productAttributeRepository;
         $this->eavSetupFactory = $eavSetupFactory;
@@ -107,9 +107,8 @@ class AttributesCreateTask
         $this->processAttributes();
         // Process variants attributes which are going to be used for configurable product
         $this->processVariantAttributes();
-
-        $this->replicationHelper->updateCronStatus($this->cronStatus, LSR::SC_SUCCESS_CRON_ATTRIBUTE);
-
+        $this->replicationHelper->updateCronStatus($this->successCronAttribute, LSR::SC_SUCCESS_CRON_ATTRIBUTE);
+        $this->replicationHelper->updateCronStatus($this->successCronAttributeVariant, LSR::SC_SUCCESS_CRON_ATTRIBUTE_VARIANT);
     }
 
     public function executeManually()
@@ -119,7 +118,7 @@ class AttributesCreateTask
         /** @var \Ls\Replication\Model\ReplAttributeSearchResults $replAttributes */
         $replAttributes = $this->replAttributeRepositoryInterface->getList($criteria);
         $itemsLeftToProcess = count($replAttributes->getItems());
-        return array($itemsLeftToProcess);
+        return [$itemsLeftToProcess];
     }
 
     /**
@@ -153,10 +152,12 @@ class AttributesCreateTask
                 $this->addAttributeOptions($replAttribute->getCode());
             }
             $replAttribute->setData('processed', '1');
+            $replAttribute->setData('is_updated', '0');
             $this->replAttributeRepositoryInterface->save($replAttribute);
-            $this->cronStatus = true;
         }
-
+        if (count($replAttributes->getItems()) == 0) {
+            $this->successCronAttribute = true;
+        }
     }
 
     /**
@@ -174,13 +175,18 @@ class AttributesCreateTask
 
         $criteria = $this->replicationHelper->buildCriteriaForNewItems('', '', '', 1000);
         $variants = $this->replExtendedVariantValueRepository->getList($criteria)->getItems();
-        $variantCodes = array();
+        $variantCodes = [];
         /** @var \Ls\Replication\Model\ReplExtendedVariantValue $variant */
         foreach ($variants as $variant) {
             $variant->setData('processed', '1');
+            $variant->setData('is_updated', '0');
             $this->replExtendedVariantValueRepository->save($variant);
-            if (empty($variantCodes[$variant->getCode()]) || !in_array($variant->getValue(), $variantCodes[$variant->getCode()]))
+            if (empty($variantCodes[$variant->getCode()]) || !in_array($variant->getValue(), $variantCodes[$variant->getCode()])) {
                 $variantCodes[$variant->getCode()][] = $variant->getValue();
+            }
+        }
+        if (count($variants->getItems()) == 0) {
+            $this->successCronAttributeVariant = true;
         }
         foreach ($variantCodes as $code => $value) {
             $formattedCode = $this->replicationHelper->formatAttributeCode($code);
@@ -231,7 +237,7 @@ class AttributesCreateTask
             }
 
             $existingOptions = $this->getOptimizedOptionArrayByAttributeCode($formattedCode);
-            $newoptionsArray = array();
+            $newoptionsArray = [];
             if (empty($existingOptions)) {
                 $this->eavSetupFactory->create()
                     ->addAttributeOption(
@@ -240,7 +246,6 @@ class AttributesCreateTask
                             'attribute_id' => $this->getAttributeIdbyCode($formattedCode)
                         ]
                     );
-
             } elseif (!empty($value)) {
                 foreach ($value as $k => $v) {
                     if (!in_array($v, $existingOptions)) {
@@ -257,8 +262,6 @@ class AttributesCreateTask
                         );
                 }
             }
-
-            $this->cronStatus = true;
         }
     }
 
@@ -338,7 +341,6 @@ class AttributesCreateTask
                     ]
                 );
         }
-
     }
 
     /**
@@ -348,7 +350,7 @@ class AttributesCreateTask
      */
     protected function generateOptionValues($attribute_code = '')
     {
-        $optionarray = array();
+        $optionarray = [];
         $criteria = $this->replicationHelper->buildCriteriaForNewItems('Code', $attribute_code, 'eq');
         /** @var \Ls\Replication\Model\ReplAttributeOptionValueSearchResults $replAttributeOptionValues */
         $replAttributeOptionValues = $this->replAttributeOptionValueRepositoryInterface->getList($criteria);
@@ -384,7 +386,7 @@ class AttributesCreateTask
      */
     protected function getValueTypeArray()
     {
-        return array(
+        return [
             '0' => 'text',
             '1' => 'text',
             '2' => 'price',
@@ -394,7 +396,7 @@ class AttributesCreateTask
             '6' => 'text',
             '7' => 'select',
             '100' => 'text'
-        );
+        ];
     }
 
     /**
@@ -404,7 +406,7 @@ class AttributesCreateTask
      */
     protected function getOptimizedOptionArrayByAttributeCode($attribute_code = '')
     {
-        $optimziedArray = array();
+        $optimziedArray = [];
         if ($attribute_code == '' || is_null($attribute_code)) {
             return $optimziedArray;
         }
