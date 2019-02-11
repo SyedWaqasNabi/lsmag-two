@@ -6,12 +6,16 @@
  */
 namespace Ls\Replication\Controller\Adminhtml\Grids;
 
+/**
+ * Class HierarchyNode
+ * @package Ls\Replication\Controller\Adminhtml\Grids
+ */
 class HierarchyNode extends \Magento\Backend\App\Action
 {
     /**
      * @var \Magento\Framework\View\Result\PageFactory
      */
-    protected $resultPageFactory;
+    public $resultPageFactory;
 
     /**
      * Constructor

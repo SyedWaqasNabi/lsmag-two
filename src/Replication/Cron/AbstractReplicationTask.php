@@ -12,6 +12,10 @@ use ReflectionClass;
 use Magento\Config\Model\ResourceModel\Config;
 use Ls\Core\Model\LSR;
 
+/**
+ * Class AbstractReplicationTask
+ * @package Ls\Replication\Cron
+ */
 abstract class AbstractReplicationTask
 {
     /** @var array */
@@ -55,9 +59,17 @@ abstract class AbstractReplicationTask
         "ls_mag/replication/repl_item" => ["nav_id"],
         "ls_mag/replication/repl_item_category" => ["nav_id"],
         "ls_mag/replication/repl_item_unit_of_measure" => ["Code", "ItemId"],
-        "ls_mag/replication/repl_item_variant_registration" => ["ItemId", "VariantDimension1", "VariantDimension2", "VariantDimension3", "VariantDimension4", "VariantDimension5", "VariantDimension6"],
+        "ls_mag/replication/repl_item_variant_registration" => [
+            "ItemId",
+            "VariantDimension1",
+            "VariantDimension2",
+            "VariantDimension3",
+            "VariantDimension4",
+            "VariantDimension5",
+            "VariantDimension6"
+        ],
         "ls_mag/replication/repl_loy_vendor_item_mapping" => ["NavManufacturerId", "NavProductId"],
-        "ls_mag/replication/repl_price" => ["ItemId", "VariantId"],
+        "ls_mag/replication/repl_price" => ["ItemId", "VariantId", "StoreId", "QtyPerUnitOfMeasure", "UnitOfMeasure"],
         "ls_mag/replication/repl_product_group" => ["nav_id"],
         "ls_mag/replication/repl_shipping_agent" => ["Name"],
         "ls_mag/replication/repl_store" => ["nav_id"],
@@ -68,21 +80,21 @@ abstract class AbstractReplicationTask
     ];
 
     /** @var LoggerInterface */
-    protected $logger;
+    public $logger;
     /** @var ScopeConfigInterface */
-    protected $scope_config;
+    public $scope_config;
     /** @var Config */
-    protected $resource_config;
+    public $resource_config;
     /** @var LsHelper */
-    protected $ls_helper;
+    public $ls_helper;
     /** @var null */
-    protected $iterator_method = null;
+    public $iterator_method = null;
     /** @var null */
-    protected $properties = null;
-    /** @var RepHelper */
-    protected $rep_helper;
+    public $properties = null;
+    /** @var ReplicationHelper */
+    public $rep_helper;
     /** @var integer */
-    protected $recordsRemaining = 0;
+    public $recordsRemaining = 0;
 
     /**
      * AbstractReplicationTask constructor.
@@ -111,7 +123,7 @@ abstract class AbstractReplicationTask
     /**
      * @throws \ReflectionException
      */
-    function execute()
+    public function execute()
     {
         $lsr = $this->getLsrModel();
         if ($lsr->isLSR()) {
@@ -147,16 +159,17 @@ abstract class AbstractReplicationTask
             $remaining = $result->getRecordsRemaining();
             $this->recordsRemaining = $remaining;
             $traversable = $this->getIterator($result);
-            if (!is_null($traversable)) {
+            if ($traversable != null) {
+                // @codingStandardsIgnoreStart
                 if (count($traversable) > 0) {
+                    // @codingStandardsIgnoreEnd
                     foreach ($traversable as $source) {
                         $this->saveSource($properties, $source);
                     }
                     $this->updateSuccessStatus();
                 } else {
                     $arrayTraversable = (array)$traversable;
-                    if (count($arrayTraversable) > 0) {
-                        $entityClass = new ReflectionClass($this->getMainEntity());
+                    if (!empty($arrayTraversable)) {
                         $singleObject = (object)$traversable->getArrayCopy();
                         $uniqueAttributes = self::$jobCodeUniqueFieldArray[$this->getConfigPath()];
                         $entityArray = $this->checkEntityExistByAttributes($uniqueAttributes, $singleObject, true);
@@ -196,7 +209,11 @@ abstract class AbstractReplicationTask
         }
     }
 
-    function executeManually()
+    /**
+     * @return array
+     * @throws \ReflectionException
+     */
+    public function executeManually()
     {
         $this->execute();
         return [$this->recordsRemaining];
@@ -205,7 +222,7 @@ abstract class AbstractReplicationTask
     /**
      * Update the Custom Replication Success Status
      */
-    protected function updateSuccessStatus()
+    public function updateSuccessStatus()
     {
         $confPath = $this->getConfigPath();
         if ($confPath == "ls_mag/replication/repl_attribute") {
@@ -214,12 +231,18 @@ abstract class AbstractReplicationTask
             $this->rep_helper->updateCronStatus(false, LSR::SC_SUCCESS_CRON_ATTRIBUTE_VARIANT);
         } elseif ($confPath == "ls_mag/replication/repl_hierarchy_node") {
             $this->rep_helper->updateCronStatus(false, LSR::SC_SUCCESS_CRON_CATEGORY);
-        } elseif ($confPath == "ls_mag/replication/repl_item" || $confPath == "ls_mag/replication/repl_hierarchy_leaf") {
+        } elseif ($confPath == "ls_mag/replication/repl_item" ||
+            $confPath == "ls_mag/replication/repl_hierarchy_leaf") {
             $this->rep_helper->updateCronStatus(false, LSR::SC_SUCCESS_CRON_PRODUCT);
         }
     }
 
-    protected function toObject(array $array, $object)
+    /**
+     * @param array $array
+     * @param $object
+     * @return mixed
+     */
+    public function toObject(array $array, $object)
     {
         $class = get_class($object);
         $methods = get_class_methods($class);
@@ -235,8 +258,11 @@ abstract class AbstractReplicationTask
         return $object;
     }
 
-
-    protected function saveSource($properties, $source)
+    /**
+     * @param $properties
+     * @param $source
+     */
+    public function saveSource($properties, $source)
     {
         $uniqueAttributes = self::$jobCodeUniqueFieldArray[$this->getConfigPath()];
         $entityArray = $this->checkEntityExistByAttributes($uniqueAttributes, $source);
@@ -271,17 +297,18 @@ abstract class AbstractReplicationTask
     /**
      * @return string[]
      */
-    final protected function getProperties()
+    final public function getProperties()
     {
-        if (is_null($this->properties)) {
+        if ($this->properties == null) {
+            // @codingStandardsIgnoreStart
             $reflected_entity = new ReflectionClass($this->getMainEntity());
+            // @codingStandardsIgnoreEnd
             $properties = [];
             foreach ($reflected_entity->getProperties() as $property) {
                 $properties[] = $property->getName();
             }
             $this->properties = $properties;
         }
-
         return $this->properties;
     }
 
@@ -292,11 +319,12 @@ abstract class AbstractReplicationTask
      * @param $notAnArraysObject
      * @return bool | array
      */
-    protected function checkEntityExistByAttributes($uniqueAttributes, $source, $notAnArraysObject = false)
+    public function checkEntityExistByAttributes($uniqueAttributes, $source, $notAnArraysObject = false)
     {
-        // TODO create SearchCriteria Instance
         $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+        // @codingStandardsIgnoreStart
         $criteria = $objectManager->get('Magento\Framework\Api\SearchCriteriaBuilder');
+        // @codingStandardsIgnoreEnd
         foreach ($uniqueAttributes as $attribute) {
             if ($attribute == 'nav_id') {
                 $get_method = 'getId';
@@ -327,7 +355,7 @@ abstract class AbstractReplicationTask
      * @param $nav_id
      * @return bool
      */
-    protected function checkNavIdExist($nav_id)
+    public function checkNavIdExist($nav_id)
     {
         try {
             $item = $this->getFactory()->create();
@@ -337,12 +365,11 @@ abstract class AbstractReplicationTask
         }
     }
 
-
     /**
      * Check LastKey is always zero or not using Replication Config Path
      * @return bool
      */
-    protected function isLastKeyAlwaysZero()
+    public function isLastKeyAlwaysZero()
     {
         if (in_array($this->getConfigPath(), self::$no_lastkey_config_path)) {
             return true;
@@ -354,7 +381,7 @@ abstract class AbstractReplicationTask
     /**
      * @return string
      */
-    protected function getLastKey()
+    public function getLastKey()
     {
         return $this->scope_config->getValue($this->getConfigPath(), ScopeConfigInterface::SCOPE_TYPE_DEFAULT);
     }
@@ -362,7 +389,7 @@ abstract class AbstractReplicationTask
     /**
      * @return string
      */
-    protected function isFirstTime()
+    public function isFirstTime()
     {
         return $this->scope_config->getValue($this->getConfigPathStatus(), ScopeConfigInterface::SCOPE_TYPE_DEFAULT);
     }
@@ -370,7 +397,7 @@ abstract class AbstractReplicationTask
     /**
      * @param  string
      */
-    protected function persistLastKey($last_key)
+    public function persistLastKey($last_key)
     {
         $this->resource_config->saveConfig(
             $this->getConfigPath(),
@@ -383,7 +410,7 @@ abstract class AbstractReplicationTask
     /**
      * @param int $status
      */
-    protected function saveReplicationStatus($status = 0)
+    public function saveReplicationStatus($status = 0)
     {
         $this->resource_config->saveConfig(
             $this->getConfigPathStatus(),
@@ -398,10 +425,12 @@ abstract class AbstractReplicationTask
      * @return null|\Traversable
      * @throws \ReflectionException
      */
-    protected function getIterator($result)
+    public function getIterator($result)
     {
-        if (is_null($this->iterator_method)) {
+        if ($this->iterator_method === null) {
+            // @codingStandardsIgnoreStart
             $reflected = new ReflectionClass($result);
+            // @codingStandardsIgnoreEnd
             foreach ($reflected->getMethods() as $method) {
                 $method_name = $method->getName();
                 if (strpos($method_name, 'get') === 0 && !in_array($method, self::$bypass_methods)) {
@@ -419,35 +448,38 @@ abstract class AbstractReplicationTask
     }
 
     /**
-     * We cant use the DI method to get LSR model in here, so we need to use the object manager approach to get LSR model.
+     * We cant use the DI method to get LSR model in here,
+     * so we need to use the object manager approach to get LSR model.
      * @return \Ls\Core\Model\LSR
      */
-    protected function getLsrModel()
+    public function getLsrModel()
     {
         $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+        // @codingStandardsIgnoreStart
         return $objectManager->get('\Ls\Core\Model\LSR');
+        // @codingStandardsIgnoreEnd
     }
 
     /**
      * @return string
      */
-    abstract function getConfigPath();
+    abstract public function getConfigPath();
 
     /**
      * @return string
      */
-    abstract function getConfigPathStatus();
+    abstract public function getConfigPathStatus();
 
     /**
      * @param $last_key
      *
      * @return OperationInterface
      */
-    abstract function makeRequest($last_key);
+    abstract public function makeRequest($last_key);
 
-    abstract function getFactory();
+    abstract public function getFactory();
 
-    abstract function getRepository();
+    abstract public function getRepository();
 
-    abstract function getMainEntity();
+    abstract public function getMainEntity();
 }

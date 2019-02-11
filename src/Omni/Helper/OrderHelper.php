@@ -10,18 +10,29 @@ use Magento\Framework\App\Helper\AbstractHelper;
 use Magento\Framework\App\Helper\Context;
 use Magento\Sales\Model;
 
+/**
+ * Class OrderHelper
+ * @package Ls\Omni\Helper
+ */
 class OrderHelper extends AbstractHelper
 {
 
     /** @var Model\Order $order */
-    protected $order;
+    public $order;
     /** @var \Ls\Omni\Helper\BasketHelper $basketHelper */
-    protected $basketHelper;
+    public $basketHelper;
     /**
      * @var \Magento\Customer\Model\Session\Proxy
      */
-    protected $customerSession;
+    public $customerSession;
 
+    /**
+     * OrderHelper constructor.
+     * @param Context $context
+     * @param Model\Order $order
+     * @param BasketHelper $basketHelper
+     * @param \Magento\Customer\Model\Session\Proxy $customerSession
+     */
     public function __construct(
         Context $context,
         Model\Order $order,
@@ -54,12 +65,14 @@ class OrderHelper extends AbstractHelper
      */
     public function prepareOrder(Model\Order $order, Entity\BasketCalcResponse $basketCalcResponse)
     {
+        // @codingStandardsIgnoreStart
         //$isInline = LSR::getStoreConfig( LSR::SC_CART_SALESORDER_INLINE ) == LSR_Core_Model_System_Source_Process_Type::ON_DEMAND;
         $isInline = true;
         $storeId = $this->basketHelper->getDefaultWebStore();
         #$shipmentFee = $this->getShipmentFeeProdut();
         #$shipmentFeeId = $shipmentFee->getData('lsr_id');
         //TODO get this dynamic.
+        // @codingStandardsIgnoreEnd
         $anonymousOrder = false;
         if ($this->customerSession->isLoggedIn()) {
             $customerEmail = $this->customerSession->getCustomer()->getData('email');
@@ -69,7 +82,8 @@ class OrderHelper extends AbstractHelper
             $cardId = $this->customerSession->getData(LSR::SESSION_CUSTOMER_CARDID);
         } else {
             $customerEmail = $order->getCustomerEmail();
-            $customerName = $order->getShippingAddress()->getFirstname() . " " . $order->getShippingAddress()->getLastname();
+            $customerName = $order->getShippingAddress()->getFirstname() . " " .
+                $order->getShippingAddress()->getLastname();
             $mobileNumber = $order->getShippingAddress()->getTelephone();
             $contactId = $cardId = "";
             $anonymousOrder = true;
@@ -77,12 +91,15 @@ class OrderHelper extends AbstractHelper
         $shippingMethod = $order->getShippingMethod(true);
         //TODO work on condition
         $isClickCollect = $shippingMethod->getData('carrier_code') == 'clickandcollect';
+        // @codingStandardsIgnoreLine
         $entity = new Entity\Order();
         /** @var Entity\OrderLine[] $orderLinesArray */
         $orderLinesArray = [];
+        // @codingStandardsIgnoreLine
         $orderLinesArrayObject = new Entity\ArrayOfOrderLine();
         /** @var Entity\OrderDiscountLine[] $discountArray */
         $discountArray = [];
+        // @codingStandardsIgnoreLine
         $discountArrayObject = new Entity\ArrayOfOrderDiscountLine();
         /** @var Entity\BasketLineCalcResponse[] $lines */
         $lines = $basketCalcResponse->getBasketLineCalcResponses()->getBasketLineCalcResponse();
@@ -116,6 +133,7 @@ class OrderHelper extends AbstractHelper
             $entity->setCollectLocation($order->getPickupStore());
             $entity->setShipClickAndCollect(false);
         }
+        // @codingStandardsIgnoreLine
         $request = new Entity\OrderCreate();
         $request->setRequest($entity);
         return $request;
@@ -131,7 +149,8 @@ class OrderHelper extends AbstractHelper
     public function populateOrderAndDiscountCollection($lines, $order, & $orderLinesArray, & $discountArray)
     {
     /*
-    * When there is only one item in the $lines, it does not return in the form of array, it returns in the form of object.
+    * When there is only one item in the $lines,
+     * it does not return in the form of array, it returns in the form of object.
     */
         $shipmentFeeId = 66010;
         if (!is_array($lines) and $lines instanceof Entity\BasketLineCalcResponse) {
@@ -163,7 +182,6 @@ class OrderHelper extends AbstractHelper
                     $this->getOrderLineCollectionElement($line, $orderLinesArray);
                     $this->populateDiscountArrayForEachLine($line, $discountArray);
                 }
-
             }
         }
     }
@@ -187,6 +205,7 @@ class OrderHelper extends AbstractHelper
      */
     public function getOrderLineCollectionElement($line, & $orderLinesArray)
     {
+        // @codingStandardsIgnoreStart
         $line = (new Entity\OrderLine())
             ->setItemId($line->getItemId())
             ->setQuantity($line->getQuantity())
@@ -200,6 +219,7 @@ class OrderHelper extends AbstractHelper
             ->setTaxAmount($line->getTAXAmount())
             ->setLineNumber($line->getLineNumber());
         $orderLinesArray[] = $line;
+        // @codingStandardsIgnoreEnd
     }
 
     /**
@@ -211,16 +231,18 @@ class OrderHelper extends AbstractHelper
     {
         $lineDiscounts = $line->getBasketLineDiscResponses();
         $discounts = [];
-        if (!is_null($lineDiscounts->getBasketLineDiscResponse())) {
+        if (!($lineDiscounts->getBasketLineDiscResponse()==null)) {
             /** @var Entity\BasketLineDiscResponse[] $discounts */
             $discounts = $lineDiscounts->getBasketLineDiscResponse();
         }
-        if (count($discounts) > 0) {
+        if (!empty($discounts)) {
             /** @var Entity\BasketLineCalcResponse $discount */
             foreach ($discounts as $discount) {
                 // not actually needed
+                // @codingStandardsIgnoreStart
                 // 'qty' => $discount->getQuantity(),
                 # store information from current discount
+                // @codingStandardsIgnoreLine
                 $discountArray[] = (new Entity\OrderDiscountLine())
                     ->setDescription($discount->getDescription())
                     ->setDiscountAmount($discount->getDiscountAmount())
@@ -232,6 +254,7 @@ class OrderHelper extends AbstractHelper
                     ->setPeriodicDiscGroup($discount->getPeriodicDiscGroup())
                     ->setPeriodicDiscType($discount->getPeriodicDiscType());
             }
+            // @codingStandardsIgnoreEnd
         }
     }
 
@@ -243,8 +266,10 @@ class OrderHelper extends AbstractHelper
     public function placeOrder(Entity\OrderCreate $request)
     {
         $response = null;
+        // @codingStandardsIgnoreLine
         $operation = new Operation\OrderCreate();
         $response = $operation->execute($request);
+        // @codingStandardsIgnoreLine
         return $response ? $response->getResult() : $response;
     }
 
@@ -254,13 +279,16 @@ class OrderHelper extends AbstractHelper
      */
     public function convertAddress(Model\Order\Address $magentoAddress)
     {
+        // @codingStandardsIgnoreLine
         $omniAddress = new Entity\Address();
         foreach ($magentoAddress->getStreet() as $i => $street) {
+            // @codingStandardsIgnoreLine
             //TODO support multiple line address more than 3.
             // stopping the address for multiple street lines, only accepting Address1 and Address2.
             if ($i > 1) {
                 break;
             }
+            // @codingStandardsIgnoreLine
             $method = "setAddress" . strval($i + 1);
             $omniAddress->$method($street);
         }
@@ -280,8 +308,10 @@ class OrderHelper extends AbstractHelper
     public function setOrderPayments(Model\Order $order)
     {
         $orderPaymentArray = [];
+        // @codingStandardsIgnoreStart
         $orderPaymentArrayObject = new Entity\ArrayOfOrderPayment();
         $orderPayment = new Entity\OrderPayment();
+        // @codingStandardsIgnoreEnd
         //default values for all payment typoes.
         $orderPayment->setCurrencyCode($order->getOrderCurrency()->getCurrencyCode())
             ->setCurrencyFactor($order->getBaseToGlobalRate())
@@ -292,9 +322,11 @@ class OrderHelper extends AbstractHelper
 
         // For Cash On Delivery and Cheque use Tender Type as 1
         $orderPayment->setTenderType('0');
+        // @codingStandardsIgnoreLine
         /*
          * Not Supporting at the moment, so all payment methods will be offline,
-        if($order->getPayment()->getMethodInstance()->getCode() == 'cashondelivery' || $order->getPayment()->getMethodInstance()->getCode() == 'checkmo'){
+        if($order->getPayment()->getMethodInstance()->getCode() == 'cashondelivery'
+        || $order->getPayment()->getMethodInstance()->getCode() == 'checkmo'){
             // 0 Mean cash.
         }
          *

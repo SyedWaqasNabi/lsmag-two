@@ -6,12 +6,16 @@
  */
 namespace Ls\Replication\Controller\Adminhtml\Grids;
 
+/**
+ * Class Price
+ * @package Ls\Replication\Controller\Adminhtml\Grids
+ */
 class Price extends \Magento\Backend\App\Action
 {
     /**
      * @var \Magento\Framework\View\Result\PageFactory
      */
-    protected $resultPageFactory;
+    public $resultPageFactory;
 
     /**
      * Constructor

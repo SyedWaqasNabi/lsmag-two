@@ -14,8 +14,10 @@ class RestrictionGenerator extends AbstractOmniGenerator
     /** @var array  */
     static private $reserved_words = ['new', 'final'];
 
+    private $caseHelperFactory;
+
     /** @var array  */
-    protected $equivalences = [
+    public $equivalences = [
         'decimal' => 'float',
         'long' => 'int',
         'dateTime' => 'string',

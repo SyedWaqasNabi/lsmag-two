@@ -15,48 +15,36 @@ class RegisterObserver implements ObserverInterface
 {
     /** @var ContactHelper $contactHelper */
     private $contactHelper;
-    /** @var \Magento\Framework\Api\FilterBuilder $filterBuilder */
-    protected $filterBuilder;
-    /** @var \Magento\Framework\Api\SearchCriteriaBuilder $searchCriteriaBuilder */
-    protected $searchCriteriaBuilder;
-    /** @var \Magento\Customer\Model\ResourceModel\Customer */
-    protected $customerResourceModel;
-    /** @var \Magento\Framework\Message\ManagerInterface $messageManager */
-    protected $messageManager;
+
+    /** @var \Magento\Customer\Api\CustomerRepositoryInterface */
+    private $customerRepository;
+
     /** @var \Magento\Framework\Registry $registry */
-    protected $registry;
+    private $registry;
+
     /** @var \Psr\Log\LoggerInterface $logger */
-    protected $logger;
-    /** @var \Magento\Customer\Model\Session $customerSession */
-    protected $customerSession;
+    private $logger;
+
+    /** @var \Magento\Customer\Model\Session\Proxy $customerSession */
+    private $customerSession;
 
     /**
      * RegisterObserver constructor.
      * @param ContactHelper $contactHelper
-     * @param \Magento\Framework\Api\FilterBuilder $filterBuilder
-     * @param \Magento\Framework\Api\SearchCriteriaBuilder $searchCriteriaBuilder
-     * @param \Magento\Customer\Model\ResourceModel\Customer $customerResourceModel
-     * @param \Magento\Framework\Message\ManagerInterface $messageManager
+     * @param \Magento\Customer\Api\CustomerRepositoryInterface $customerRepository
      * @param \Magento\Framework\Registry $registry
      * @param \Psr\Log\LoggerInterface $logger
-     * @param \Magento\Customer\Model\Session $customerSession
+     * @param \Magento\Customer\Model\Session\Proxy $customerSession
      */
-
     public function __construct(
         ContactHelper $contactHelper,
-        \Magento\Framework\Api\FilterBuilder $filterBuilder,
-        \Magento\Framework\Api\SearchCriteriaBuilder $searchCriteriaBuilder,
-        \Magento\Customer\Model\ResourceModel\Customer $customerResourceModel,
-        \Magento\Framework\Message\ManagerInterface $messageManager,
+        \Magento\Customer\Api\CustomerRepositoryInterface $customerRepository,
         \Magento\Framework\Registry $registry,
         \Psr\Log\LoggerInterface $logger,
-        \Magento\Customer\Model\Session $customerSession
+        \Magento\Customer\Model\Session\Proxy $customerSession
     ) {
         $this->contactHelper = $contactHelper;
-        $this->filterBuilder = $filterBuilder;
-        $this->searchCriteriaBuilder = $searchCriteriaBuilder;
-        $this->customerResourceModel = $customerResourceModel;
-        $this->messageManager = $messageManager;
+        $this->customerRepository = $customerRepository;
         $this->registry = $registry;
         $this->logger = $logger;
         $this->customerSession = $customerSession;
@@ -64,14 +52,11 @@ class RegisterObserver implements ObserverInterface
 
     /**
      * @param \Magento\Framework\Event\Observer $observer
-     * @return $this|void
-     * @throws \Exception
+     * @return $this
      */
     public function execute(\Magento\Framework\Event\Observer $observer)
     {
-
         try {
-            /** @var \Magento\Customer\Controller\Account\LoginPost\Interceptor $controller_action */
             $controller_action = $observer->getData('controller_action');
             $parameters = $controller_action->getRequest()->getParams();
             $session = $this->customerSession;
@@ -97,13 +82,11 @@ class RegisterObserver implements ObserverInterface
                         );
                         $customer->setGroupId($customerGroupId);
                     }
-
-                    // TODO use Repository instead of Model.
-                    $this->customerResourceModel->save($customer);
+                    $this->customerRepository->save($customer->getDataModel());
                     $this->registry->register(LSR::REGISTRY_LOYALTY_LOGINRESULT, $contact);
                     $session->setData(LSR::SESSION_CUSTOMER_SECURITYTOKEN, $token);
                     $session->setData(LSR::SESSION_CUSTOMER_LSRID, $contact->getId());
-                    if (!is_null($card)) {
+                    if ($card !== null) {
                         $session->setData(LSR::SESSION_CUSTOMER_CARDID, $card->getId());
                     }
                 }

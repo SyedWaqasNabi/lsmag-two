@@ -6,12 +6,16 @@
  */
 namespace Ls\Replication\Controller\Adminhtml\Grids;
 
+/**
+ * Class AttributeOptionValue
+ * @package Ls\Replication\Controller\Adminhtml\Grids
+ */
 class AttributeOptionValue extends \Magento\Backend\App\Action
 {
     /**
      * @var \Magento\Framework\View\Result\PageFactory
      */
-    protected $resultPageFactory;
+    public $resultPageFactory;
 
     /**
      * Constructor

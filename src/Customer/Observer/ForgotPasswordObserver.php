@@ -16,29 +16,37 @@ class ForgotPasswordObserver implements ObserverInterface
 {
     /** @var ContactHelper $contactHelper */
     private $contactHelper;
+
     /** @var \Magento\Framework\Message\ManagerInterface $messageManager */
-    protected $messageManager;
+    private $messageManager;
+
     /** @var \Psr\Log\LoggerInterface $logger */
-    protected $logger;
-    /** @var \Magento\Customer\Model\Session $customerSession */
-    protected $customerSession;
+    private $logger;
+
+    /** @var \Magento\Customer\Model\Session\Proxy $customerSession */
+    private $customerSession;
+
     /** @var \Magento\Framework\App\ActionFlag */
-    protected $actionFlag;
+    private $actionFlag;
+
     /** @var \Magento\Framework\App\Response\RedirectInterface */
-    protected $redirectInterface;
+    private $redirectInterface;
+
     /** @var \Magento\Customer\Model\CustomerFactory */
-    protected $customerFactory;
+    private $customerFactory;
+
     /** @var \Magento\Store\Model\StoreManagerInterface */
-    protected $storeManager;
+    private $storeManager;
+
     /** @var \Magento\Customer\Model\ResourceModel\Customer */
-    protected $customerResourceModel;
+    private $customerResourceModel;
 
     /**
      * ForgotPasswordObserver constructor.
      * @param ContactHelper $contactHelper
      * @param \Magento\Framework\Message\ManagerInterface $messageManager
      * @param \Psr\Log\LoggerInterface $logger
-     * @param \Magento\Customer\Model\Session $customerSession
+     * @param \Magento\Customer\Model\Session\Proxy $customerSession
      * @param \Magento\Framework\App\Response\RedirectInterface $redirectInterface
      * @param \Magento\Framework\App\ActionFlag $actionFlag
      * @param \Magento\Customer\Model\CustomerFactory $customerFactory
@@ -50,7 +58,7 @@ class ForgotPasswordObserver implements ObserverInterface
         ContactHelper $contactHelper,
         \Magento\Framework\Message\ManagerInterface $messageManager,
         \Psr\Log\LoggerInterface $logger,
-        \Magento\Customer\Model\Session $customerSession,
+        \Magento\Customer\Model\Session\Proxy $customerSession,
         \Magento\Framework\App\Response\RedirectInterface $redirectInterface,
         \Magento\Framework\App\ActionFlag $actionFlag,
         \Magento\Customer\Model\CustomerFactory $customerFactory,
@@ -69,9 +77,10 @@ class ForgotPasswordObserver implements ObserverInterface
     }
 
     /**
-     * Check if email is belongs to any account on Omni, if yes then generate the resetpasswordcode and store it in customer account.
+     * Check if email is belongs to any account on Omni, i
+     * f yes then generate the resetpasswordcode and store it in customer account.
      * @param \Magento\Framework\Event\Observer $observer
-     * @return $this|void
+     * @return $this
      * @throws \Exception
      * @throws \Magento\Framework\Exception\LocalizedException
      * @throws \Zend_Validate_Exception
@@ -89,13 +98,8 @@ class ForgotPasswordObserver implements ObserverInterface
             if ($email) {
                 if (!Zend_Validate::is($email, Zend_Validate_EmailAddress::class)) {
                     $this->customerSession->setForgottenEmail($email);
-                    $this->messageManager->addErrorMessage(
-                        __('Please correct the email address.')
-                    );
-                    $this->actionFlag->set('', \Magento\Framework\App\Action\Action::FLAG_NO_DISPATCH, true);
-                    $observer->getControllerAction()
-                        ->getResponse()
-                        ->setRedirect($this->redirectInterface->getRefererUrl());
+                    $errorMessage   =   'Please correct the email address.';
+                    return $this->handleErrorMessage($observer, $errorMessage);
                 }
                 $result = $this->contactHelper->forgotPassword($email);
                 if ($result) {
@@ -107,19 +111,31 @@ class ForgotPasswordObserver implements ObserverInterface
                     $customer->setData('lsr_resetcode', $result);
                     $this->customerResourceModel->save($customer);
                 } else {
-                    $this->messageManager->addErrorMessage(
-                        __('There is no account found with the provided email address. ')
-                    );
                     $this->customerSession->setForgottenEmail($email);
-                    $this->actionFlag->set('', \Magento\Framework\App\Action\Action::FLAG_NO_DISPATCH, true);
-                    $observer->getControllerAction()
-                        ->getResponse()
-                        ->setRedirect($this->redirectInterface->getRefererUrl());
+                    $errorMessage   =   'There is no account found with the provided email address.';
+                    return $this->handleErrorMessage($observer, $errorMessage);
                 }
             }
         } catch (\Exception $e) {
             $this->logger->error($e->getMessage());
         }
+        return $this;
+    }
+
+    /**
+     * @param \Magento\Framework\Event\Observer $observer
+     * @param string $errorMessage
+     * @return $this
+     */
+    private function handleErrorMessage(\Magento\Framework\Event\Observer $observer, $errorMessage = '')
+    {
+        $this->messageManager->addErrorMessage(
+            __($errorMessage)
+        );
+        $this->actionFlag->set('', \Magento\Framework\App\Action\Action::FLAG_NO_DISPATCH, true);
+        $observer->getControllerAction()->getResponse()->setRedirect(
+            $this->redirectInterface->getRefererUrl()
+        );
         return $this;
     }
 }

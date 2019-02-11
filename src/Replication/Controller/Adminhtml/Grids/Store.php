@@ -6,12 +6,16 @@
  */
 namespace Ls\Replication\Controller\Adminhtml\Grids;
 
+/**
+ * Class Store
+ * @package Ls\Replication\Controller\Adminhtml\Grids
+ */
 class Store extends \Magento\Backend\App\Action
 {
     /**
      * @var \Magento\Framework\View\Result\PageFactory
      */
-    protected $resultPageFactory;
+    public $resultPageFactory;
 
     /**
      * Constructor

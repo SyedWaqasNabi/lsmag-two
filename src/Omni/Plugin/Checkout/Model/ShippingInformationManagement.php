@@ -2,10 +2,14 @@
 
 namespace Ls\Omni\Plugin\Checkout\Model;
 
+/**
+ * Class ShippingInformationManagement
+ * @package Ls\Omni\Plugin\Checkout\Model
+ */
 class ShippingInformationManagement
 {
     /** @var \Magento\Quote\Model\QuoteRepository  */
-    protected $quoteRepository;
+    public $quoteRepository;
 
     /**
      * ShippingInformationManagement constructor.
@@ -30,10 +34,10 @@ class ShippingInformationManagement
         \Magento\Checkout\Api\Data\ShippingInformationInterface $addressInformation
     ) {
         $extAttributes = $addressInformation->getExtensionAttributes();
-        $pickupDate = $extAttributes->getPickupDate();
+//        $pickupDate = $extAttributes->getPickupDate();
         $pickupStore = $extAttributes->getPickupStore();
         $quote = $this->quoteRepository->getActive($cartId);
-        $quote->setPickupDate($pickupDate);
+//        $quote->setPickupDate($pickupDate);
         $quote->setPickupStore($pickupStore);
     }
 }

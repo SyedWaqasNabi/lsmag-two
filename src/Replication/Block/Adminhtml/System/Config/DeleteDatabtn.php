@@ -2,13 +2,17 @@
 
 namespace Ls\Replication\Block\Adminhtml\System\Config;
 
+/**
+ * Class DeleteDatabtn
+ * @package Ls\Replication\Block\Adminhtml\System\Config
+ */
 class DeleteDatabtn extends \Magento\Config\Block\System\Config\Form\Field
 {
 
     /**
      * @return $this
      */
-    protected function _prepareLayout()
+    public function _prepareLayout()
     {
         parent::_prepareLayout();
         if (!$this->getTemplate()) {
@@ -21,7 +25,6 @@ class DeleteDatabtn extends \Magento\Config\Block\System\Config\Form\Field
      * @param \Magento\Framework\Data\Form\Element\AbstractElement $element
      * @return string
      */
-
     public function render(\Magento\Framework\Data\Form\Element\AbstractElement $element)
     {
         $element->unsScope()->unsCanUseWebsiteValue()->unsCanUseDefaultValue();
@@ -32,8 +35,7 @@ class DeleteDatabtn extends \Magento\Config\Block\System\Config\Form\Field
      * @param \Magento\Framework\Data\Form\Element\AbstractElement $element
      * @return string
      */
-
-    protected function _getElementHtml(\Magento\Framework\Data\Form\Element\AbstractElement $element)
+    public function _getElementHtml(\Magento\Framework\Data\Form\Element\AbstractElement $element)
     {
         $originalData = $element->getOriginalData();
         $buttonLabel = $originalData['button_label'];

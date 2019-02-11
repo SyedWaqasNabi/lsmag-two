@@ -1,6 +1,5 @@
 <?php
 
-
 namespace Ls\Core\Setup;
 
 use Magento\Framework\DB\Ddl\Table;
@@ -8,6 +7,10 @@ use Magento\Framework\Setup\InstallSchemaInterface;
 use Magento\Framework\Setup\ModuleContextInterface;
 use Magento\Framework\Setup\SchemaSetupInterface;
 
+/**
+ * Class InstallSchema
+ * @package Ls\Core\Setup
+ */
 class InstallSchema implements InstallSchemaInterface
 {
 
@@ -32,7 +35,6 @@ class InstallSchema implements InstallSchemaInterface
             'nullable' => true,
             'comment' => 'Accept parameters from the specific job types'
         ]);
-
 
         /**
          * For Click and Collect.
@@ -75,6 +77,17 @@ class InstallSchema implements InstallSchemaInterface
                 'type' => 'text',
                 'nullable' => true,
                 'comment' => 'Pick Up Store',
+            ]
+        );
+
+        $installer->getConnection()->addColumn(
+            $installer->getTable('sales_order'),
+            'document_id',
+            [
+                'type' => \Magento\Framework\DB\Ddl\Table::TYPE_TEXT,
+                'length' => 255,
+                'nullable' => true,
+                'comment' =>'Document Id'
             ]
         );
 

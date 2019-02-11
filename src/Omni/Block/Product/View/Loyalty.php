@@ -2,12 +2,16 @@
 
 namespace Ls\Omni\Block\Product\View;
 
+/**
+ * Class Loyalty
+ * @package Ls\Omni\Block\Product\View
+ */
 class Loyalty extends \Magento\Framework\View\Element\Template
 {
     /**
      * @var \Magento\Customer\Model\Session\Proxy
      */
-    protected $customerSession;
+    public $customerSession;
 
     /**
      * Loyalty constructor.
